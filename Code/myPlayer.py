@@ -18,7 +18,6 @@ class myPlayer(PlayerInterface):
     def __init__(self):
         self._board = Goban.Board()
         self._mycolor = None
-        self._ItDeep = ItDeep.IterativeDeepening(self._board)
 
     def getPlayerName(self):
         return "Gab & Yo"
@@ -32,7 +31,9 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
 
-        move = self._ItDeep.getMove() 
+        itDeep = ItDeep.IterativeDeepening(self._board)
+        move = itDeep.getMove() 
+
         self._board.push(move)
         self._displayMove(move)
         return Goban.Board.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
