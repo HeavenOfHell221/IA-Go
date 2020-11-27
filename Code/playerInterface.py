@@ -13,7 +13,7 @@ class PlayerInterface():
 
 
     def getPlayerMove(self): 
-        ''' This is where you will put your AI. This function must return the move as a standard
+        """ This is where you will put your AI. This function must return the move as a standard
         move in GO, ie, "A1", "A2", ..., "D5", ..., "J8", "J9" or "PASS"
 
         WARNING: In the Board class, legal_moves() and weak_legal_moves() are giving internal
@@ -25,7 +25,7 @@ class PlayerInterface():
 
         The result of this function must be one element of [Board.flat_to_name(m) for m in b.legal_moves()]
         (it has to be legal, so at the end, weak_legal_moves() may not be sufficient here.)
-        '''
+        """
         return "PASS" 
 
     def playOpponentMove(self, move): 

@@ -1,10 +1,8 @@
+# -*- coding: utf-8 -*-
 import Goban
 import time
 from random import choice
-from AlgoIAInterface import *
-
-# CurrentDepth impair => Niveau Ami (1, 3, ..)
-# CurrentDepth pair => Niveau Ennemi (0, 2, 4, ..)
+from AbstractAlgoIA import *
 
 class Movement:
 
@@ -17,19 +15,20 @@ class Movement:
     def __repr__(self):
         return f"move=[{self.move}], index=[{self.index}], depth=[{self.depth}], score=[{self.score}]"
 
-class IterativeDeepening(AlgoIAInterface):
+class IterativeDeepening(AbstractAlgoIA):
 
     #############################################
     #############################################
     ''' Main '''
 
     def __init__(self, board, duration = 5):
-        AlgoIAInterface.__init__(self, board)
+        AbstractAlgoIA.__init__(self, board)
         self._itDeepDuration = duration
         self._stopDepth = 1
         self._timeToStop = 0
 
         self._bestMoves = {}
+
 
     #############################################
     #############################################
@@ -37,7 +36,6 @@ class IterativeDeepening(AlgoIAInterface):
 
     def getMove(self):
 
-        # Quand "self._timeToStop >= time.time()" sera vrai, alors il ce sera écoulé {self._itDeepDuration} seconde(s)
         self._timeToStop = time.time() + self._itDeepDuration
 
         lastMove = None
@@ -80,11 +78,11 @@ class IterativeDeepening(AlgoIAInterface):
         firstMoveToCheck = 0
         maxValue = -1000000 
 
-        moves = self._board.generate_legal_moves()
+        moves = super().getLegalMovements()
 
         for i in range(firstMoveToCheck, len(moves)):
             
-            self._push(moves[i]) 
+            super().push(moves[i]) 
             
             if currentDepth == self._stopDepth:
                 valueCurrentMove = self._boardValue(isFriendLevel)
@@ -93,7 +91,7 @@ class IterativeDeepening(AlgoIAInterface):
                                                     alpha = -1000000, beta = 1000000, 
                                                     isFriendLevel = not isFriendLevel)
             
-            self._pop()
+            super().pop()
 
             if valueCurrentMove == None: # Si le temps est écoulé
                 return None
@@ -114,23 +112,23 @@ class IterativeDeepening(AlgoIAInterface):
         if time.time() >= self._timeToStop:
             return None
 
-        if currentDepth == self._stopDepth or self._board.is_game_over():
+        if currentDepth == self._stopDepth or super().isGameOver():
             return self._boardValue(isFriendLevel)
 
-        moves = self._board.weak_legal_moves()
+        moves = super().getWeakMovements()
         
         firstMove = 0
 
         for i in range(firstMove, len(moves)):
 
-            if self._push(moves[i]) == False: # Si le mouvement n'est pas légal
-                self._pop()
+            if super().push(moves[i]) == False: # Si le mouvement n'est pas légal
+                super().pop()
                 continue # On passe au mouvement suivant
 
             retValue = self._alphaBeta(currentDepth = currentDepth + 1, alpha = alpha, beta = beta, 
                                     isFriendLevel = not isFriendLevel)
             
-            self._pop()
+            super().pop()
             
             if retValue == None:
                 return None

@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 import Goban
 import time
-from AlgoIAInterface import *
+from AbstractAlgoIA import *
 from random import choice
 
-class MonteCarlo(AlgoIAInterface):
+class MonteCarlo(AbstractAlgoIA):
 
     def __init__(self, board):
-        AlgoIAInterface.__init__(self, board)
+        AbstractAlgoIA.__init__(self, board)
 
     
 
