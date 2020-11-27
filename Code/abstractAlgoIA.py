@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-import Goban
 import time
+from Goban import Board 
 from random import choice
-from abc import ABC, abstractmethod 
+from abc import ABC as AbstractClass
+from abc import abstractmethod 
+from aliasesType import *
 
-class AbstractAlgoIA(ABC):
+class AbstractAlgoIA(AbstractClass):
 
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board:Goban):
+    def __init__(self, board: Board):
         self.__board = board
    
 
@@ -17,32 +19,32 @@ class AbstractAlgoIA(ABC):
     '''     Public functions for myPlayer     '''
 
     @abstractmethod
-    def getMove(self):
+    def get_next_move(self) -> FlattenMove:
         pass
 
 
     ############################################
     '''     Delegation Goban functions       '''
     
-    def push(self, move):
+    def push(self, move: int) -> bool:
         return self.__board.push(move)
 
         ########
 
-    def pop(self):
+    def pop(self) -> None:
         self.__board.pop()
 
         ########
     
-    def isGameOver(self) -> bool:
+    def is_game_over(self) -> bool:
         return self.__board.is_game_over()
 
         ########
 
-    def getWeakMovements(self) -> []:
+    def weak_legal_moves(self) -> FlattenMoves:
         return self.__board.weak_legal_moves()
 
         ########
 
-    def getLegalMovements(self) -> []:
+    def legal_moves(self) -> FlattenMoves:
         return self.__board.legal_moves()
