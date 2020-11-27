@@ -9,7 +9,7 @@ class AbstractAlgoIA(ABC):
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board):
+    def __init__(self, board:Goban):
         self.__board = board
    
 
@@ -34,15 +34,15 @@ class AbstractAlgoIA(ABC):
 
         ########
     
-    def isGameOver(self):
-        self.__board.is_game_over()
+    def isGameOver(self) -> bool:
+        return self.__board.is_game_over()
 
         ########
 
-    def getWeakMovements(self):
+    def getWeakMovements(self) -> []:
         return self.__board.weak_legal_moves()
 
         ########
 
-    def getLegalMovements(self):
+    def getLegalMovements(self) -> []:
         return self.__board.legal_moves()
