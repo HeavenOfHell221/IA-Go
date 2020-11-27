@@ -6,25 +6,14 @@ from random import choice
 from abstractAlgoIA import AbstractAlgoIA
 from aliasesType import *
 
-class Movement:
-
-    def __init__(self, move = None, index = None, depth = 0, score = 0):
-        self.move = move
-        self.index = index
-        self.depth = depth
-        self.score = score
-
-    def __repr__(self):
-        return f"move=[{self.move}], index=[{self.index}], depth=[{self.depth}], score=[{self.score}]"
-
 class IterativeDeepening(AbstractAlgoIA):
 
-    #############################################
-    #############################################
-    ''' Main '''
+    ############################################
+    '''             Constructor              '''
 
-    def __init__(self, board: Board, duration = 5):
+    def __init__(self, board: Board, color:int, duration = 10):
         AbstractAlgoIA.__init__(self, board)
+        self.__color = color
         self.__itDeepDuration = duration
         self.__stopDepth = 1
         self.__timeToStop = 0
@@ -32,11 +21,11 @@ class IterativeDeepening(AbstractAlgoIA):
         self.__bestMoves = {}
 
 
-    #############################################
-    #############################################
-    ''' public functions for myPlayer '''
+    ############################################
+    '''   public functions for myPlayer      '''
 
-    def get_next_move(self) -> Union[FlattenMove, None]:
+
+    def get_next_move(self) -> FlattenMove_None:
 
         self.__timeToStop = time.time() + self.__itDeepDuration
 
@@ -56,20 +45,31 @@ class IterativeDeepening(AbstractAlgoIA):
     
 
     #############################################
-    #############################################
-    ''' Internal functions '''
+    '''         Internal functions            '''
 
 
     def _board_value(self, isFriendLevel: bool) -> int:
-        ''' 
-        Heuristique d'un plateau de jeu de GO avec 9x9 cases 
-        TODO : Avoir un objet pour gérer les heuristiques
-        '''
-        return choice([i for i in range(1, 100)]) * (1 if isFriendLevel else -1) 
+        ''' Heuristique d'un plateau de jeu de GO avec 9x9 cases '''
+        otherColor = super().switch_color(self.__color)
 
-            ####
+        nbStrings = super().nb_strings(self.__color)
+        nbStrings_Other = super().nb_strings(otherColor)
 
-    def _start_alpha_beta(self) -> Union[FlattenMove, None]:
+        nbLiberties = super().nb_liberties(self.__color)
+        nbLiberties_Other = super().nb_liberties(otherColor)
+
+        nbStones = super().nb_stones(self.__color)
+        nbStones_Other = super().nb_stones(otherColor)
+
+        ret = (nbLiberties/(nbLiberties_Other if nbLiberties_Other > 0 else 1))*100 + 
+                (nbStones/(nbStones_Other if nbStones_Other > 0 else 1))*100 
+
+        return (ret if isFriendLevel else ret*-1)
+
+        ########
+
+
+    def _start_alpha_beta(self) -> FlattenMove_None:
         isFriendLevel = True
         currentDepth = 1
         possibleMoves:FlattenMoves = []
@@ -104,7 +104,9 @@ class IterativeDeepening(AbstractAlgoIA):
         move = choice(possibleMoves)
         return move
 
-            ####
+
+        ########
+
 
     def _alpha_beta(self, currentDepth: int, alpha: int, beta: int, isFriendLevel: bool) -> Union[FlattenMove, None]:
         if time.time() >= self.__timeToStop:

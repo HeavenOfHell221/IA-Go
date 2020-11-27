@@ -31,7 +31,7 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
 
-        itDeep = ItDeep(self._board)
+        itDeep = ItDeep(self._board, self._mycolor)
         move = itDeep.get_next_move() 
 
         self._board.push(move)

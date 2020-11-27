@@ -119,6 +119,8 @@ class Board:
       self._nbBLACK = 0
       self._capturedWHITE = 0
       self._capturedBLACK = 0
+      self._nbLiberties = {Board._WHITE:0 , Board._BLACK:0}
+      self._nbStrings = {Board._WHITE:0 , Board._BLACK:0}
 
       self._nextPlayer = self._BLACK
       self._board = np.zeros((Board._BOARDSIZE**2), dtype='int8')
@@ -155,6 +157,48 @@ class Board:
           self._neighbors.append(-1) # Sentinelle
       self._neighborsEntries = np.array(self._neighborsEntries, dtype='int16')
       self._neighbors = np.array(self._neighbors, dtype='int8')
+
+    @property
+    def currentHash(self) -> int:
+        ''' Board._currentHash property. Get current hash of the current board. '''
+        return self._currentHash
+
+    @property
+    def nbStoneWHITE(self) -> int:
+        ''' Board._nbWHITE property. Get the number of white stone. '''
+        return self._nbWHITE
+
+    @property
+    def nbStoneBLACK(self) -> int:
+        ''' Board._nbWHITE property. Get the number of black stone. '''
+        return self._nbBLACK
+
+    def nb_stones(self, color:int) -> int:
+        if color == Board._WHITE:
+            return self._nbWHITE
+        elif color == Board._BLACK:
+            return self._nbBLACK
+        assert False
+
+    def nb_liberties_at(self, fcoord:int) -> int:
+        ''' Board._stringLiberties property. Get the number of liberties for a stone at the coordinates {fcoord}.'''
+        return self._stringLiberties[fcoord] 
+
+    def nb_stone_at(self, fcoord:int, color:int) -> int:
+        assert color == _BLACK or color == _WHITE or color == _EMPTY
+        n = 0
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            if self._board[self._neighbors[i]] == color:
+                n += 1
+            i += 1
+        return n
+
+    def nb_liberties(self, color:int) -> int:
+        return self._nbLiberties[color] 
+
+    def nb_strings(self, color:int) -> int:
+        return self._nbStrings[color]
 
     ##########################################################
     ##########################################################
@@ -337,6 +381,8 @@ class Board:
 
     def _pushBoard(self):
         currentStatus = []
+        currentStatus.append(self._nbLiberties.copy())
+        currentStatus.append(self._nbStrings.copy())
         currentStatus.append(self._nbWHITE)
         currentStatus.append(self._nbBLACK)
         currentStatus.append(self._capturedWHITE)
@@ -367,6 +413,8 @@ class Board:
         self._capturedWHITE = oldStatus.pop()
         self._nbBLACK = oldStatus.pop()
         self._nbWHITE = oldStatus.pop()
+        self._nbStrings = oldStatus.pop()
+        self._nbLiberties = oldStatus.pop()
         self._historyMoveNames.pop()
 
     def _getPositionHash(self, fcoord, color):
@@ -408,8 +456,10 @@ class Board:
             assert fcoord in self._empties
         self._empties.remove(fcoord)
 
+        otherColor = Board.flip(color)
         nbEmpty = 0
         nbSameColor = 0
+        nbOtherColor = 0
         i = self._neighborsEntries[fcoord]
         while self._neighbors[i] != -1:
             n = self._board[self._neighbors[i]]
@@ -417,11 +467,15 @@ class Board:
                 nbEmpty += 1
             elif n == color:
                 nbSameColor += 1
+            elif n == otherColor:
+                nbOtherColor += 1
             i += 1
-        nbOtherColor = 4 - nbEmpty - nbSameColor
+
         currentString = fcoord
-        self._stringLiberties[currentString] = nbEmpty
+        self._stringLiberties[currentString] = nbEmpty              
         self._stringSizes[currentString] = 1
+        self._nbLiberties[color] += nbEmpty
+        self._nbStrings[color] += 1
 
         stringWithNoLiberties = [] # String to capture (if applies)
         i = self._neighborsEntries[fcoord]
@@ -430,15 +484,19 @@ class Board:
             if self._board[fn] == color: # We may have to merge the strings
                 stringNumber = self._getStringOfStone(fn)
                 self._stringLiberties[stringNumber] -= 1
+                self._nbLiberties[color] -= 1
                 if currentString != stringNumber:
                     self._merge_strings(stringNumber, currentString)
+                    self._nbStrings[color] -= 1
                 currentString = stringNumber
             elif self._board[fn] != Board._EMPTY: # Other color
                 stringNumber = self._getStringOfStone(fn)
                 self._stringLiberties[stringNumber] -= 1
+                self._nbLiberties[otherColor] -= 1
                 if self._stringLiberties[stringNumber] == 0:
                     if stringNumber not in stringWithNoLiberties: # We may capture more than one string
                         stringWithNoLiberties.append(stringNumber)
+                        self._nbStrings[otherColor] -= 1
             i += 1
 
         return stringWithNoLiberties
