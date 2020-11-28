@@ -5,6 +5,7 @@ from random import choice
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
 from Modules.aliasesType import *
+import copy
 
 class AbstractAlgoIA(AbstractClass):
 
@@ -99,3 +100,6 @@ class AbstractAlgoIA(AbstractClass):
 
     def flat_to_name(self, fcoord) -> str:
         return MyBoard.flat_to_name(fcoord)
+
+    def deepcopy_board(self) -> MyBoard:
+        return copy.deepcopy(self.__board)
