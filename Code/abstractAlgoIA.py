@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
-from .MyGoban import MyBoard
+from MyGoban import MyBoard
 from random import choice
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
@@ -11,7 +11,7 @@ class AbstractAlgoIA(AbstractClass):
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board: Board):
+    def __init__(self, board: MyBoard):
         self.__board = board
    
 
@@ -90,7 +90,7 @@ class AbstractAlgoIA(AbstractClass):
         ########
 
     def switch_color(self, color:int) -> int:
-        return Board.flip(color)
+        return MyBoard.flip(color)
 
         ########
 

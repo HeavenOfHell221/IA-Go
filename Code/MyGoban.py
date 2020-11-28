@@ -36,7 +36,7 @@ def getProperRandom():
     return np.random.randint(np.iinfo(np.int64).max, dtype='int64') 
 
 class MyBoard:
-    ''' GO Board class to implement your (simple) GO player.'''
+    ''' GO MyBoard class to implement your (simple) GO player.'''
 
     __VERSION__ = 2.2
     __BLACK = 1
@@ -60,12 +60,12 @@ class MyBoard:
         Internally, all the moves are flatten. If you use legal_moves or weak_legal_moves, it will produce flatten
         coordinates.''' 
         if coord == (-1,-1): return -1
-        return Board.__BOARDSIZE * coord[1] + coord[0]
+        return MyBoard.__BOARDSIZE * coord[1] + coord[0]
 
     @staticmethod
     def unflatten(fcoord):
         if fcoord == -1: return (-1, -1)
-        d = divmod(fcoord, Board.__BOARDSIZE)
+        d = divmod(fcoord, MyBoard.__BOARDSIZE)
         return d[1], d[0]
 
     @staticmethod
@@ -79,7 +79,7 @@ class MyBoard:
 
     @staticmethod
     def name_to_flat(s):
-        return Board.flatten(Board.name_to_coord(s))
+        return MyBoard.flatten(MyBoard.name_to_coord(s))
 
     @staticmethod
     def coord_to_name(coord):
@@ -90,7 +90,7 @@ class MyBoard:
     @staticmethod
     def flat_to_name(fcoord):
         if fcoord == -1: return 'PASS'
-        return Board.coord_to_name(Board.unflatten(fcoord))
+        return MyBoard.coord_to_name(MyBoard.unflatten(fcoord))
 
     ##########################################################
     ##########################################################
@@ -98,15 +98,15 @@ class MyBoard:
 
     @staticmethod
     def flip(player):
-        if player == Board.__BLACK:
-            return Board.__WHITE
-        return Board.__BLACK
+        if player == MyBoard.__BLACK:
+            return MyBoard.__WHITE
+        return MyBoard.__BLACK
 
     @staticmethod
     def player_name(player):
-        if player == Board.__BLACK:
+        if player == MyBoard.__BLACK:
             return "black"
-        elif player == Board.__WHITE:
+        elif player == MyBoard.__WHITE:
             return "white"
         return "???"
 
@@ -119,24 +119,24 @@ class MyBoard:
       self._nbBLACK = 0
       self._capturedWHITE = 0
       self._capturedBLACK = 0
-      self._nbLiberties = {Board.__WHITE:0 , Board.__BLACK:0}
-      self._nbStrings = {Board.__WHITE:0 , Board.__BLACK:0}
+      self._nbLiberties = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
+      self._nbStrings = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
 
       self._nextPlayer = self.__BLACK
-      self._board = np.zeros((Board.__BOARDSIZE**2), dtype='int8')
+      self._board = np.zeros((MyBoard.__BOARDSIZE**2), dtype='int8')
 
       self._lastPlayerHasPassed = False
       self._gameOver = False
 
-      self._stringUnionFind = np.full((Board.__BOARDSIZE**2), -1, dtype='int8')
-      self._stringLiberties = np.full((Board.__BOARDSIZE**2), -1, dtype='int8')
-      self._stringSizes = np.full((Board.__BOARDSIZE**2), -1, dtype='int8')
+      self._stringUnionFind = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
+      self._stringLiberties = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
+      self._stringSizes = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
 
-      self._empties = set(range(Board.__BOARDSIZE **2))
+      self._empties = set(range(MyBoard.__BOARDSIZE **2))
 
       # Zobrist values for the hashes. I use np.int64 to be machine independant
-      self._positionHashes = np.empty((Board.__BOARDSIZE**2, 2), dtype='int64')
-      for x in range(Board.__BOARDSIZE**2):
+      self._positionHashes = np.empty((MyBoard.__BOARDSIZE**2, 2), dtype='int64')
+      for x in range(MyBoard.__BOARDSIZE**2):
             for c in range(2):
                 self._positionHashes[x][c] = getProperRandom()
       self._currentHash = getProperRandom() 
@@ -150,7 +150,7 @@ class MyBoard:
       #Building fast structures for accessing neighborhood
       self._neighbors = []
       self._neighborsEntries = []
-      for nl in [self._get_neighbors(fcoord) for fcoord in range(Board.__BOARDSIZE**2)] :
+      for nl in [self._get_neighbors(fcoord) for fcoord in range(MyBoard.__BOARDSIZE**2)] :
           self._neighborsEntries.append(len(self._neighbors))
           for n in nl:
               self._neighbors.append(n)
@@ -163,20 +163,20 @@ class MyBoard:
     ##########################################################
     ##########################################################
     ''' Simple helper function to directly access the board.
-    if b is a Board(), you can ask for b[m] to get the value of the corresponding cell,
-    (0 for Empty, 1 for Black and 2 for White, see Board.__BLACK,__WHITE,__EMPTY values)
+    if b is a MyBoard(), you can ask for b[m] to get the value of the corresponding cell,
+    (0 for Empty, 1 for Black and 2 for White, see MyBoard.__BLACK,__WHITE,__EMPTY values)
     If you want to have an access via coordinates on the board you can use it like
-    b[Board.flatten((x,y))]
+    b[MyBoard.flatten((x,y))]
 
     '''
     def __getitem__(self, key):
-        ''' Helper access to the board, from flatten coordinates (in [0 .. Board.BOARDSIZE**2]). 
+        ''' Helper access to the board, from flatten coordinates (in [0 .. MyBoard.BOARDSIZE**2]). 
         Read Only array. If you want to add a stone on the board, you have to use
         _put_stone().'''
         return self._board[key]
 
     def __len__(self):
-        return Board.__BOARDSIZE**2
+        return MyBoard.__BOARDSIZE**2
 
     def __str__(self):
         ''' WARNING: this print function does not reflect the classical coordinates. It represents the internal
@@ -184,7 +184,7 @@ class MyBoard:
         toreturn=""
         for i,c in enumerate(self._board):
             toreturn += self._piece2str(c) + " " # +'('+str(i)+":"+str(self._stringUnionFind[i])+","+str(self._stringLiberties[i])+') '
-            if (i+1) % Board.__BOARDSIZE == 0:
+            if (i+1) % MyBoard.__BOARDSIZE == 0:
                 toreturn += "\n"
         toreturn += "Next player: " + ("BLACK" if self._nextPlayer == self.__BLACK else "WHITE") + "\n"
         toreturn += str(self._nbBLACK) + " blacks and " + str(self._nbWHITE) + " whites on board\n"
@@ -202,7 +202,7 @@ class MyBoard:
     def legal_moves(self):
         '''
         Produce a list of moves, ie flatten moves. They are integers representing the coordinates on the board. To get
-        named Move (like A1, D5, ..., PASS) from these moves, you can use the function Board.flat_to_name(m).
+        named Move (like A1, D5, ..., PASS) from these moves, you can use the function MyBoard.flat_to_name(m).
 
         This function only produce legal moves. That means that SuperKO are checked BEFORE trying to move (when
         populating the returned list). This can
@@ -218,7 +218,7 @@ class MyBoard:
     def weak_legal_moves(self):
         '''
         Produce a list of moves, ie flatten moves. They are integers representing the coordinates on the board. To get
-        named Move (like A1, D5, ..., PASS) from these moves, you can use the function Board.flat_to_name(m).
+        named Move (like A1, D5, ..., PASS) from these moves, you can use the function MyBoard.flat_to_name(m).
         Can generate illegal moves, but only due to Super KO position. In this generator, KO are not checked.
         If you use a move from this list, you have to check if push(m) was True or False and then immediatly pop 
         it if it is False (meaning the move was superKO.'''
@@ -233,12 +233,12 @@ class MyBoard:
     def move_to_str(self, m):
         ''' Transform the internal representation of a move into a string. Simple wrapper, but useful for 
         producing general code.'''
-        return Board.flat_to_name(m)
+        return MyBoard.flat_to_name(m)
 
     def str_to_move(self, s):
         ''' Transform a move given as a string into an internal representation. Simple wrapper here, but may be
         more complex in other games.'''
-        return Board.name_to_flat(s)
+        return MyBoard.name_to_flat(s)
 
     def play_move(self, fcoord):
         ''' Main internal function to play a move. 
@@ -276,7 +276,7 @@ class MyBoard:
 
         self._seenHashes.add(self._currentHash)
         self._historyMoveNames.append(self.flat_to_name(fcoord))
-        self._nextPlayer = Board.flip(self._nextPlayer)
+        self._nextPlayer = MyBoard.flip(self._nextPlayer)
         return True
     
     def next_player(self):
@@ -349,11 +349,11 @@ class MyBoard:
             return "0"
        
     def pretty_print(self):
-        if Board.__BOARDSIZE not in [5,7,9]:
+        if MyBoard.__BOARDSIZE not in [5,7,9]:
             print(self)
             return
         print()
-        print("To Move: ", "black" if self._nextPlayer == Board.__BLACK else "white")
+        print("To Move: ", "black" if self._nextPlayer == MyBoard.__BLACK else "white")
         print("Last player has passed: ", "yes" if self._lastPlayerHasPassed else "no")
         print()
         print("     WHITE (O) has captured %d stones" % self._capturedBLACK)
@@ -362,25 +362,25 @@ class MyBoard:
         print("     WHITE (O) has %d stones" % self._nbWHITE)
         print("     BLACK (X) has %d stones" % self._nbBLACK)
         print()
-        if Board.__BOARDSIZE == 9:
+        if MyBoard.__BOARDSIZE == 9:
             specialPoints = [(2,2), (6,2), (4,4), (2,6), (6,6)]
             headerline = "    A B C D E F G H J"
-        elif Board.__BOARDSIZE == 7:
+        elif MyBoard.__BOARDSIZE == 7:
             specialPoints = [(2,2), (4,2), (3,3), (2,4), (4,4)]
             headerline = "    A B C D E F G"
         else:
             specialPoints = [(1,1), (3,1), (2,2), (1,3), (3,3)]
             headerline = "    A B C D E"
         print(headerline)
-        for l in range(Board.__BOARDSIZE):
-            line = Board.__BOARDSIZE - l
+        for l in range(MyBoard.__BOARDSIZE):
+            line = MyBoard.__BOARDSIZE - l
             print("  %d" % line, end="")
-            for c in range(Board.__BOARDSIZE):
-                p = self._board[Board.flatten((c, Board.__BOARDSIZE - l - 1))]
+            for c in range(MyBoard.__BOARDSIZE):
+                p = self._board[MyBoard.flatten((c, MyBoard.__BOARDSIZE - l - 1))]
                 ch = '.'
-                if p==Board.__WHITE:
+                if p==MyBoard.__WHITE:
                     ch = 'O'
-                elif p==Board.__BLACK:
+                elif p==MyBoard.__BLACK:
                     ch = 'X'
                 elif (l,c) in specialPoints:
                     ch = '+'
@@ -440,9 +440,9 @@ class MyBoard:
 
     # Used only in init to build the neighborsEntries datastructure
     def _get_neighbors(self, fcoord):
-        x, y = Board.unflatten(fcoord)
+        x, y = MyBoard.unflatten(fcoord)
         neighbors = ((x+1, y), (x-1, y), (x, y+1), (x, y-1))
-        return [Board.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
+        return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
 
     # for union find structure, recover the number of the current string of stones
     def _getStringOfStone(self, fcoord):
@@ -474,14 +474,14 @@ class MyBoard:
             assert fcoord in self._empties
         self._empties.remove(fcoord)
 
-        otherColor = Board.flip(color)
+        otherColor = MyBoard.flip(color)
         nbEmpty = 0
         nbSameColor = 0
         nbOtherColor = 0
         i = self._neighborsEntries[fcoord]
         while self._neighbors[i] != -1:
             n = self._board[self._neighbors[i]]
-            if  n == Board.__EMPTY:
+            if  n == MyBoard.__EMPTY:
                 nbEmpty += 1
             elif n == color:
                 nbSameColor += 1
@@ -507,7 +507,7 @@ class MyBoard:
                     self._merge_strings(stringNumber, currentString)
                     self._nbStrings[color] -= 1
                 currentString = stringNumber
-            elif self._board[fn] != Board.__EMPTY: # Other color
+            elif self._board[fn] != MyBoard.__EMPTY: # Other color
                 stringNumber = self._getStringOfStone(fn)
                 self._stringLiberties[stringNumber] -= 1
                 self._nbLiberties[otherColor] -= 1
@@ -520,16 +520,16 @@ class MyBoard:
         return stringWithNoLiberties
 
     def _is_on_board(self,x,y):
-        return x >= 0 and x < Board.__BOARDSIZE and y >= 0 and y < Board.__BOARDSIZE
+        return x >= 0 and x < MyBoard.__BOARDSIZE and y >= 0 and y < MyBoard.__BOARDSIZE
 
     def _is_suicide(self, fcoord, color):
-        opponent = Board.flip(color)
+        opponent = MyBoard.flip(color)
         i = self._neighborsEntries[fcoord]
         libertiesFriends = {}
         libertiesOpponents = {}
         while self._neighbors[i] != -1:
             fn = self._neighbors[i]
-            if self._board[fn] == Board.__EMPTY:
+            if self._board[fn] == MyBoard.__EMPTY:
                 return False
             string = self._getStringOfStone(fn)
             if self._board[fn] == color: # check that we don't kill the whole zone
@@ -538,7 +538,7 @@ class MyBoard:
                 else:
                     libertiesFriends[string] -= 1
             else:
-                if Board.__DEBUG:
+                if MyBoard.__DEBUG:
                     assert self._board[fn] == opponent
                 if string not in libertiesOpponents:
                     libertiesOpponents[string] = self._stringLiberties[string] - 1
@@ -572,7 +572,7 @@ class MyBoard:
         assert self._currentHash == tmpHash ^ self._getPositionHash(fcoord, color)
         i = self._neighborsEntries[fcoord]
         libertiesOpponents = {}
-        opponent = Board.flip(color)
+        opponent = MyBoard.flip(color)
         while self._neighbors[i] != -1:
             fn = self._neighbors[i]
             #print("superko looks at ", self.coord_to_name(fn), "for move", self.coord_to_name(fcoord))
@@ -623,7 +623,7 @@ class MyBoard:
         while len(to_check) > 0:
             s = to_check.pop()
             ssize = 0
-            assert self._board[s] == Board.__EMPTY
+            assert self._board[s] == MyBoard.__EMPTY
             frontier = [s]
             touched_blacks, touched_whites = 0, 0
             currentstring = []
@@ -636,12 +636,12 @@ class MyBoard:
                 while self._neighbors[i] != -1:
                     n = self._neighbors[i]
                     i += 1
-                    if self._board[n] == Board.__EMPTY and n in to_check:
+                    if self._board[n] == MyBoard.__EMPTY and n in to_check:
                         to_check.remove(n)
                         frontier.append(n)
-                    elif self._board[n] == Board.__BLACK:
+                    elif self._board[n] == MyBoard.__BLACK:
                         touched_blacks += 1
-                    elif self._board[n] == Board.__WHITE:
+                    elif self._board[n] == MyBoard.__WHITE:
                         touched_whites += 1
             # here we have gathered all the informations about an empty area
             assert len(currentstring) == ssize
@@ -673,7 +673,7 @@ class MyBoard:
         # search for them.
         string = self._breadthSearchString(fc)
         for s in string:
-            if self._nextPlayer == Board.__WHITE:
+            if self._nextPlayer == MyBoard.__WHITE:
                 self._capturedBLACK += 1
                 self._nbBLACK -= 1
             else:
@@ -685,7 +685,7 @@ class MyBoard:
             i = self._neighborsEntries[s]
             while self._neighbors[i] != -1:
                 fn = self._neighbors[i]
-                if self._board[fn] != Board.__EMPTY:
+                if self._board[fn] != MyBoard.__EMPTY:
                     st = self._getStringOfStone(fn)
                     if st != s:
                         self._stringLiberties[st] += 1
@@ -699,7 +699,7 @@ class MyBoard:
     internal coordinates system'''
     def _play_named_move(self, m):
         if m != "PASS":
-            return self.play_move(Board.name_to_flat(m))
+            return self.play_move(MyBoard.name_to_flat(m))
         else:
             return self.play_move(-1)
 
@@ -763,8 +763,8 @@ class MyBoard:
             
         # The stones    
 
-        pieces = [(x,y,self._board[Board.flatten((x,y))]) for x in range(self.__BOARDSIZE) for y in range(self.__BOARDSIZE) if
-                self._board[Board.flatten((x,y))] != Board.__EMPTY]
+        pieces = [(x,y,self._board[MyBoard.flatten((x,y))]) for x in range(self.__BOARDSIZE) for y in range(self.__BOARDSIZE) if
+                self._board[MyBoard.flatten((x,y))] != MyBoard.__EMPTY]
         for (x,y,c) in pieces:
             board += '<circle cx="'+str(border+width*x) + \
                 '" cy="'+str(border+width*(nb_cells-y-1))+'" r="' + str(circle_width) + \
@@ -785,28 +785,28 @@ class MyBoard:
 
     @property
     def currentHash(self) -> int:
-        ''' Board._currentHash property. Get current hash of the current board. '''
+        ''' MyBoard._currentHash property. Get current hash of the current board. '''
         return self._currentHash
 
     @property
     def nbStoneWHITE(self) -> int:
-        ''' Board._nbWHITE property. Get the number of white stone. '''
+        ''' MyBoard._nbWHITE property. Get the number of white stone. '''
         return self._nbWHITE
 
     @property
     def nbStoneBLACK(self) -> int:
-        ''' Board._nbWHITE property. Get the number of black stone. '''
+        ''' MyBoard._nbWHITE property. Get the number of black stone. '''
         return self._nbBLACK
 
     def nb_stones(self, color:int) -> int:
-        if color == Board.__WHITE:
+        if color == MyBoard.__WHITE:
             return self._nbWHITE
-        elif color == Board.__BLACK:
+        elif color == MyBoard.__BLACK:
             return self._nbBLACK
         assert False
 
     def nb_liberties_at(self, fcoord:int) -> int:
-        ''' Board._stringLiberties property. Get the number of liberties for a stone at the coordinates {fcoord}.'''
+        ''' MyBoard._stringLiberties property. Get the number of liberties for a stone at the coordinates {fcoord}.'''
         return self._stringLiberties[fcoord] 
 
     def nb_stone_at(self, fcoord:int, color:int) -> int:

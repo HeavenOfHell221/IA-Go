@@ -8,7 +8,7 @@ import time
 from MyGoban import MyBoard 
 from random import choice
 from playerInterface import PlayerInterface
-from Algo.iterativeDeepening import IterativeDeepening as ItDeep
+from iterativeDeepening import IterativeDeepening as ItDeep
 
 class myPlayer(PlayerInterface):
     ''' Example of a random player for the go. The only tricky part is to be able to handle
@@ -24,7 +24,7 @@ class myPlayer(PlayerInterface):
 
     def newGame(self, color):
         self._mycolor = color
-        self._opponent = Board.flip(color)
+        self._opponent = MyBoard.flip(color)
     
     def getPlayerMove(self):
         if self._board.is_game_over():
@@ -35,13 +35,13 @@ class myPlayer(PlayerInterface):
         move = itDeep.get_next_move() 
 
         self._board.push(move)
-        self._displayMove(move)
-        return Board.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
+        self._display_move(move)
+        return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
 
     def playOpponentMove(self, move):
         print("Opponent played ", move) # New here
         # the board needs an internal represetation to push the move.  Not a string
-        self._board.push(Board.name_to_flat(move)) 
+        self._board.push(MyBoard.name_to_flat(move)) 
 
     def endGame(self, winner):
         if self._mycolor == winner:
@@ -49,8 +49,8 @@ class myPlayer(PlayerInterface):
         else:
             print("I lost :(!!")
 
-    def _displayMove(self, move):
+    def _display_move(self, move):
         # New here: allows to consider internal representations of moves
         print("I am playing ", self._board.move_to_str(move))
         print("My current board :")
-        self._board.prettyPrint()
+        self._board.pretty_print()

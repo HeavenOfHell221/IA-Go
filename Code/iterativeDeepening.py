@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-from ..Code.MyGoban import MyBoard
+from MyGoban import MyBoard
 from random import choice
 from abstractAlgoIA import AbstractAlgoIA
 from aliasesType import *
@@ -11,7 +11,7 @@ class IterativeDeepening(AbstractAlgoIA):
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board: Board, duration = 10):
+    def __init__(self, board: MyBoard, duration = 10):
         AbstractAlgoIA.__init__(self, board)
         self.__itDeepDuration = duration
         self.__stopDepth = 1
