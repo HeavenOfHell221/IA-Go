@@ -4,7 +4,7 @@ import time
 from MyGoban import MyBoard
 from random import choice
 from abstractAlgoIA import AbstractAlgoIA
-from aliasesType import *
+from Modules.aliasesType import *
 
 class IterativeDeepening(AbstractAlgoIA):
 
@@ -75,11 +75,13 @@ class IterativeDeepening(AbstractAlgoIA):
         firstMoveToCheck = 0
         maxValue = -1000000 
 
-        moves = super().legal_moves()
+        moves = super().weak_legal_moves()
 
         for i in range(firstMoveToCheck, len(moves)):
             
-            super().push(moves[i]) 
+            if super().push(moves[i]) == False: # Si le mouvement n'est pas légal
+                super().pop()
+                continue # On passe au mouvement suivant
             
             if currentDepth == self.__stopDepth:
                 valueCurrentMove = self._board_value(isFriendLevel)

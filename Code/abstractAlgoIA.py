@@ -4,7 +4,7 @@ from MyGoban import MyBoard
 from random import choice
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
-from aliasesType import *
+from Modules.aliasesType import *
 
 class AbstractAlgoIA(AbstractClass):
 
@@ -96,3 +96,6 @@ class AbstractAlgoIA(AbstractClass):
 
     def next_player(self) -> int:
         return self.__board.next_player()
+
+    def flat_to_name(self, fcoord) -> str:
+        return MyBoard.flat_to_name(fcoord)

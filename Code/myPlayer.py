@@ -9,6 +9,7 @@ from MyGoban import MyBoard
 from random import choice
 from playerInterface import PlayerInterface
 from iterativeDeepening import IterativeDeepening as ItDeep
+from monteCarlo import MonteCarlo 
 
 class myPlayer(PlayerInterface):
     ''' Example of a random player for the go. The only tricky part is to be able to handle
@@ -31,8 +32,10 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
 
-        itDeep = ItDeep(self._board)
-        move = itDeep.get_next_move() 
+        #itDeep = ItDeep(self._board)
+        #move = itDeep.get_next_move() 
+        mc = MonteCarlo(self._board)
+        move = mc.get_next_move()
 
         self._board.push(move)
         self._display_move(move)
