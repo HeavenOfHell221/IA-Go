@@ -5,10 +5,10 @@ myPlayer class.
 Right now, this class contains the copy of the randomPlayer. But you have to change this! '''
 
 import time
-from Goban import Board 
+from MyGoban import MyBoard 
 from random import choice
 from playerInterface import PlayerInterface
-from iterativeDeepening import IterativeDeepening as ItDeep
+from Algo.iterativeDeepening import IterativeDeepening as ItDeep
 
 class myPlayer(PlayerInterface):
     ''' Example of a random player for the go. The only tricky part is to be able to handle
@@ -16,7 +16,7 @@ class myPlayer(PlayerInterface):
     to translate them to the GO-move strings "A1", ..., "J8", "PASS". Easy! '''
     
     def __init__(self):
-        self._board = Board()
+        self._board = MyBoard()
         self._mycolor = None
 
     def getPlayerName(self):
@@ -31,7 +31,7 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
 
-        itDeep = ItDeep(self._board, self._mycolor)
+        itDeep = ItDeep(self._board)
         move = itDeep.get_next_move() 
 
         self._board.push(move)

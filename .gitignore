@@ -123,15 +123,14 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-
+# VSCode
+.vscode/
 
 # Other 
-games.json
-Gnugo.py
-gnugoPlayer.py
-
-localGame.py
-namedGame.py
-
-playerInterface.py
-.vscode/
+#Code/games.json
+#Code/Gnugo.py
+#Code/gnugoPlayer.py
+#Code/localGame.py
+#Code/namedGame.py
+#Code/playerInterface.py
+#fileorpackageCode/Goban.py

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import time
-from Goban import Board
+from ..Code.MyGoban import MyBoard
 from random import choice
 from abstractAlgoIA import AbstractAlgoIA
 from aliasesType import *
@@ -11,9 +11,8 @@ class IterativeDeepening(AbstractAlgoIA):
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board: Board, color:int, duration = 10):
+    def __init__(self, board: Board, duration = 10):
         AbstractAlgoIA.__init__(self, board)
-        self.__color = color
         self.__itDeepDuration = duration
         self.__stopDepth = 1
         self.__timeToStop = 0
@@ -50,18 +49,18 @@ class IterativeDeepening(AbstractAlgoIA):
 
     def _board_value(self, isFriendLevel: bool) -> int:
         ''' Heuristique d'un plateau de jeu de GO avec 9x9 cases '''
-        otherColor = super().switch_color(self.__color)
+        otherColor = super().switch_color(super().next_player())
 
-        nbStrings = super().nb_strings(self.__color)
+        nbStrings = super().nb_strings(super().next_player())
         nbStrings_Other = super().nb_strings(otherColor)
 
-        nbLiberties = super().nb_liberties(self.__color)
+        nbLiberties = super().nb_liberties(super().next_player())
         nbLiberties_Other = super().nb_liberties(otherColor)
 
-        nbStones = super().nb_stones(self.__color)
+        nbStones = super().nb_stones(super().next_player())
         nbStones_Other = super().nb_stones(otherColor)
 
-        ret = (nbLiberties/(nbLiberties_Other if nbLiberties_Other > 0 else 1))*100 + 
+        ret = (nbLiberties/(nbLiberties_Other if nbLiberties_Other > 0 else 1))*100 + \
                 (nbStones/(nbStones_Other if nbStones_Other > 0 else 1))*100 
 
         return (ret if isFriendLevel else ret*-1)
@@ -112,7 +111,10 @@ class IterativeDeepening(AbstractAlgoIA):
         if time.time() >= self.__timeToStop:
             return None
 
-        if currentDepth == self.__stopDepth or super().is_game_over():
+        if super().is_game_over():
+            return 100 if isFriendLevel else -100
+
+        if currentDepth == self.__stopDepth:
             return self._board_value(isFriendLevel)
 
         moves = super().weak_legal_moves()
