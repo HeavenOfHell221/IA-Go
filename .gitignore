@@ -127,10 +127,9 @@ dmypy.json
 .vscode/
 
 # Other 
-#Code/games.json
-#Code/Gnugo.py
-#Code/gnugoPlayer.py
-#Code/localGame.py
-#Code/namedGame.py
-#Code/playerInterface.py
-#fileorpackageCode/Goban.py
+games.json
+Code/Gnugo.py
+Code/gnugoPlayer.py
+Code/localGame.py
+Code/namedGame.py
+Code/playerInterface.py
