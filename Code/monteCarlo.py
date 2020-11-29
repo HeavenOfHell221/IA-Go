@@ -4,21 +4,11 @@ from MyGoban import MyBoard
 from abstractAlgoIA import AbstractAlgoIA
 from random import choice, shuffle
 from Modules.aliasesType import *
-#from threading import Thread
+from Modules.recursionLimit import RecursionLimit
 from multiprocessing import Process, Array
+import os
 
-import sys
-
-class recursionlimit:
-    def __init__(self, limit):
-        self.limit = limit
-        self.old_limit = sys.getrecursionlimit()
-
-    def __enter__(self):
-        sys.setrecursionlimit(self.limit)
-
-    def __exit__(self, type, value, tb):
-        sys.setrecursionlimit(self.old_limit)
+NB_CPU = len(os.sched_getaffinity(0)) - 1
 
 
 class MonteCarlo(AbstractAlgoIA):
@@ -34,34 +24,23 @@ class MonteCarlo(AbstractAlgoIA):
     '''          public functions            '''
 
     def get_next_move(self) -> FlattenMove:
-        isFriendLevel = True
         winRateMax:float = -1.0
         possibleMoves:FlattenMoves = []
-        begin = time.time()
 
         legalMoves = super().legal_moves()
         shuffle(legalMoves)
 
-        #n = round(len(legalMoves)/10)
-        threads = []
-        begin = time.time()
+        ratios = Array('d', range(len(legalMoves)))
+        n = min(len(legalMoves), NB_CPU)
+        min_n = 0
+        max_n = n
 
-        n = round(len(legalMoves)/4)
+        while max_n < len(legalMoves):
+            self._run_multiprocessing(ratios, legalMoves, winRateMax, min_n, max_n)
+            min_n = max_n
+            max_n += n 
 
-        ratios = Array('d', range(n))
-
-        for i in range(n):
-            super().push(legalMoves[i])
-            threads.append(WorkerMonteCarloProc(super().deepcopy_board(), ratios,legalMoves[i], i))
-            super().pop()
-
-        for i in range(n):
-            threads[i].join()
-
-        print(f"Temps écouté pour {n} processus : {round(time.time()-begin, 3)} ")
-        #print([r for r in ratios])
-
-        for i in range(0, n):
+        for i in range(0, min_n):
             winRate = ratios[i]
             if winRate > winRateMax:
                 winRateMax = winRate
@@ -69,41 +48,8 @@ class MonteCarlo(AbstractAlgoIA):
                 possibleMoves.append(legalMoves[i])
             elif winRate == winRateMax:
                 possibleMoves.append(legalMoves[i])
-
-        '''
-        for i in range(0, round(len(legalMoves)/4)):
-            print(f"For move [{super().flat_to_name(legalMoves[i])}]")
-            if super().push(legalMoves[i]) == False: 
-                super().pop()
-                continue 
-
-            win = 0
-            lose = 0
-
-            win, lose = self._start_monte_carlo(isFriendLevel)
-
-            super().pop()
-
-            if win+lose > 0:
-                winRate:float = win / (win+lose)
-            else:
-                winRate:float = 0.0
-            
-            print(f"Win = {win} and lose = {lose} | Total game = {win+lose} ")
-            print(f"WinRate = {round(winRate*100, 2)}%")
-            print(f"WinRateMax = {round(winRateMax*100, 2)}%")
-            print()
-
-            if winRate > winRateMax:
-                winRateMax = winRate
-                possibleMoves.clear()
-                possibleMoves.append(legalMoves[i])
-            elif winRate == winRateMax:
-                possibleMoves.append(legalMoves[i])
-        '''
-        print(possibleMoves)
-        move = choice(possibleMoves)
-        return move
+        
+        return choice(possibleMoves)
 
         ########
 
@@ -113,18 +59,18 @@ class MonteCarlo(AbstractAlgoIA):
         Return le ratio de victoire.
         Joue {n} parties.
         '''
-        legalMoves = super().legal_moves()
-        shuffle(legalMoves)
+        weakLegalMoves = super().weak_legal_moves()
+        shuffle(weakLegalMoves)
 
         win = 0
         lose = 0
-        n = round(len(legalMoves)/2)
+        n = min(40, len(weakLegalMoves))
 
         for i in range(n):
-            if super().push(legalMoves[i]) == False: 
+            if super().push(weakLegalMoves[i]) == False: 
                 super().pop()
                 continue 
-            with recursionlimit(1500):
+            with RecursionLimit(1500):
                 w , l = self._random_monte_carlo(isFriendLevel = not isFriendLevel)
             win += (w if isFriendLevel else l)
             lose += (l if isFriendLevel else w)
@@ -136,9 +82,40 @@ class MonteCarlo(AbstractAlgoIA):
     #############################################
     '''         Internal functions            '''
     
-    def _random_monte_carlo(self, isFriendLevel:bool):
+    def _run_multiprocessing(self, ratios:Array, legalMoves:FlattenMoves, winRateMax:float, begin:int, end:int) -> None:
+        isFriendLevel = True
+        possibleMoves:FlattenMoves = []
+        process = []
+        t1 = time.time()
+
+        for i in range(begin, end):
+            super().push(legalMoves[i])
+            worker = WorkerMonteCarlo(super().deepcopy_board(), ratios, legalMoves[i], i)
+            process.append(worker)
+            worker.start()
+            super().pop()
+
+        for i in range(begin, end):
+            process[i-begin].join()
+
+        print(f"Temps écouté pour {end-begin} processus : {round(time.time()-t1, 3)} ")
+
+
+        ########
+
+
+    def _random_monte_carlo(self, isFriendLevel:bool) -> Tuple[int, int]:
         ''' Joue à partir d'un plateau donné des coups aux hasard jusqu'à la fin de la partie. '''
         ''' Retourne (1,0) si c'est notre IA qui gagne, (0,1) sinon. '''
+
+        otherColor = super().switch_color(super().next_player())
+        nbLiberties = super().nb_liberties(super().next_player())
+        nbLiberties_Other = super().nb_liberties(otherColor)
+
+        if nbLiberties < 0 or nbLiberties_Other < 0:
+            print(nbLiberties, nbLiberties_Other)
+            super().pretty_print()
+        assert nbLiberties >= 0 and nbLiberties_Other >= 0
 
         if super().is_game_over():
             return (1, 0) if isFriendLevel else (0, 1)
@@ -160,37 +137,38 @@ class MonteCarlo(AbstractAlgoIA):
         lose += (l if isFriendLevel else w)
 
         return (win, lose)
-'''
-class WorkerMonteCarloThread(Thread):
 
-    def __init__(self, board:MyBoard, winRate:dict, pid:int):
-        Thread.__init__(self)
-        self.__mc = MonteCarlo(board)
-        self.__winRate = winRate
-        self.__pid = pid
 
-    def run(self):
-        print(f"Thread {self.__pid} start MonteCarlo ")
-        ratio = self.__mc.start_monte_carlo(True, self.__pid)
-        self.__winRate[self.__pid] = ratio
-        print(f"Thread {self.__pid} finish | ratio = {ratio} ")
-'''
+    ###############################################
+    ###############################################
+    ###############################################
 
-class WorkerMonteCarloProc:
+
+class WorkerMonteCarlo:
 
     def __init__(self, board:MyBoard, array:Array, move:FlattenMove, i:int):
-        self.__p = Process(target=self._run, args=(array, move, i))
+        self.__p = Process(target=self._exec, args=(array, move, i))
         self.__mc = MonteCarlo(board)
-        self.__p.start()
 
-    def _run(self, array:Array, move:FlattenMove, i:int):
+        ########
+
+    def _exec(self, array:Array, move:FlattenMove, i:int) -> None:
         print(f"Processus {i} start MonteCarlo with move {self.__mc.flat_to_name(move)} ")
+        
         ratio = self.__mc.start_monte_carlo(True)
-        print(f"Processus {i} finish | ratio = {ratio} with move {self.__mc.flat_to_name(move)}")
         array[i] = ratio
+        
+        print(f"Processus {i} finish | ratio = {ratio} with move {self.__mc.flat_to_name(move)}")
+        
+        ########
 
-    def join(self):
+    def join(self) -> None:
         self.__p.join()
+
+        ########
+
+    def start(self) -> None:
+        self.__p.start()
         
 
     

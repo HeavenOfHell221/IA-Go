@@ -65,6 +65,8 @@ class AbstractAlgoIA(AbstractClass):
     def nbStoneBlack(self) -> int:
         return self.__board.nbStoneBlack
 
+        ########
+
     def nb_stones(self, color:int) -> int:
         return self.__board.nb_stones(color)
 
@@ -72,11 +74,6 @@ class AbstractAlgoIA(AbstractClass):
 
     def nb_liberties_at(self, fcoord:FlattenMove) -> int:
         return self.__board.nb_liberties_at(fcoord) 
-
-        ########
-
-    def nb_stone_at(self, fcoord:FlattenMove, color:int) -> int:
-        return self.__board.nb_stone_at(fcoord, color)
 
         ########
 
@@ -98,8 +95,20 @@ class AbstractAlgoIA(AbstractClass):
     def next_player(self) -> int:
         return self.__board.next_player()
 
+        ########
+
     def flat_to_name(self, fcoord) -> str:
         return MyBoard.flat_to_name(fcoord)
 
+        ########
+
     def deepcopy_board(self) -> MyBoard:
         return copy.deepcopy(self.__board)
+
+        ########
+
+    def pretty_print(self) -> None:
+        self.__board.pretty_print()
+
+    def stones_list(self, color:int) -> set:
+        return self.__board.stones_list(color)
