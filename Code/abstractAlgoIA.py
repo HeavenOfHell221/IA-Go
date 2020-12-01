@@ -20,7 +20,7 @@ class AbstractAlgoIA(AbstractClass):
     '''     Public functions for myPlayer     '''
 
     @abstractmethod
-    def get_next_move(self) -> FlattenMove:
+    def get_next_move(self) -> FlattenMove_None:
         pass
 
 
@@ -52,16 +52,19 @@ class AbstractAlgoIA(AbstractClass):
 
         ########
 
+    @property
     def currentHash(self) -> int:
         return self.__board.currentHash
 
         ########
 
+    @property
     def nbStoneWhite(self) -> int:
         return self.__board.nbStoneWhite
 
         ########
 
+    @property
     def nbStoneBlack(self) -> int:
         return self.__board.nbStoneBlack
 
@@ -92,13 +95,19 @@ class AbstractAlgoIA(AbstractClass):
 
         ########
 
+    @property
     def next_player(self) -> int:
-        return self.__board.next_player()
+        return self.__board.next_player
 
         ########
 
     def flat_to_name(self, fcoord) -> str:
         return MyBoard.flat_to_name(fcoord)
+
+        ########
+
+    def name_to_flat(self, coord) -> int:
+        return MyBoard.name_to_flat(coord)
 
         ########
 
@@ -110,5 +119,30 @@ class AbstractAlgoIA(AbstractClass):
     def pretty_print(self) -> None:
         self.__board.pretty_print()
 
+        ########
+
     def stones_list(self, color:int) -> set:
         return self.__board.stones_list(color)
+
+        ########
+
+    @property
+    def winner(self) -> int:
+        return self.__board.winner
+
+        ########
+    
+    def color_stone(self, fcoord:int) -> int:
+        return self.__board[fcoord]
+
+        ########
+
+    @property
+    def EMPTY(self):
+        return self.__board.EMPTY
+
+        ########
+
+    def is_eye(self, fcoord, color) -> bool:
+        return self.__board.is_eye(fcoordn, color)
+        

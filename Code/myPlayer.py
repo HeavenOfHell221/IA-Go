@@ -10,41 +10,61 @@ from random import choice
 from playerInterface import PlayerInterface
 from iterativeDeepening import IterativeDeepening as ItDeep
 from monteCarlo import MonteCarlo 
+from gameOpening import GameOpening
 
 class myPlayer(PlayerInterface):
     ''' Example of a random player for the go. The only tricky part is to be able to handle
     the internal representation of moves given by legal_moves() and used by push() and 
     to translate them to the GO-move strings "A1", ..., "J8", "PASS". Easy! '''
     
+    ############################################
+    '''             Constructor              '''
+
     def __init__(self):
         self._board = MyBoard()
         self._mycolor = None
+        self._opponent = None
+        self._nbMove = 0
+        self._currentAlgo = None
+        self._myLastMove = None
+        self._oppenentLastMove = None
+
+    ############################################
+    '''          public functions            '''
 
     def getPlayerName(self):
         return "Gab & Yo"
 
+        ########
+
     def newGame(self, color):
+        self.__init__()
         self._mycolor = color
         self._opponent = MyBoard.flip(color)
+
+        ########
     
     def getPlayerMove(self):
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
-
-        #itDeep = ItDeep(self._board)
-        #move = itDeep.get_next_move() 
-        mc = MonteCarlo(self._board)
-        move = mc.get_next_move()
-
+        move = self._get_move()
+        self._myLastMove = move
         self._board.push(move)
         self._display_move(move)
+        self._nbMove += 1
         return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
+
+        ########
 
     def playOpponentMove(self, move):
         print("Opponent played ", move) # New here
         # the board needs an internal represetation to push the move.  Not a string
-        self._board.push(MyBoard.name_to_flat(move)) 
+        self._oppenentLastMove = move
+        m = MyBoard.name_to_flat(move)
+        self._board.push(m) 
+
+        ########
 
     def endGame(self, winner):
         if self._mycolor == winner:
@@ -52,8 +72,24 @@ class myPlayer(PlayerInterface):
         else:
             print("I lost :(!!")
 
+
+    #############################################
+    '''         Internal functions            '''
+
+
     def _display_move(self, move):
         # New here: allows to consider internal representations of moves
         print("I am playing ", self._board.move_to_str(move))
         print("My current board :")
         self._board.pretty_print()
+
+        ########
+
+    def _get_move(self):
+        #self._currentAlgo = MonteCarlo(self._board, self._mycolor)
+        
+        self._currentAlgo = ItDeep(board=self._board, duration=5)
+        move = self._currentAlgo.get_next_move()
+        return move
+
+    

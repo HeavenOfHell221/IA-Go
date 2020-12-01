@@ -114,54 +114,55 @@ class MyBoard:
     ##########################################################
 
     def __init__(self):
-      ''' Main constructor. Instantiate all non static variables.'''
-      self._nbWHITE = 0
-      self._nbBLACK = 0
-      self._capturedWHITE = 0
-      self._capturedBLACK = 0
+        ''' Main constructor. Instantiate all non static variables.'''
+        self._winner = MyBoard.__EMPTY
+        self._nbWHITE = 0
+        self._nbBLACK = 0
+        self._capturedWHITE = 0
+        self._capturedBLACK = 0
 
-      self._nbLiberties = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
-      self._nbStrings = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
+        self._nbLiberties = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
+        self._nbStrings = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
 
-      self._nextPlayer = self.__BLACK
-      self._board = np.zeros((MyBoard.__BOARDSIZE**2), dtype='int8')
+        self._nextPlayer = self.__BLACK
+        self._board = np.zeros((MyBoard.__BOARDSIZE**2), dtype='int8')
 
-      self._lastPlayerHasPassed = False
-      self._gameOver = False
+        self._lastPlayerHasPassed = False
+        self._gameOver = False
 
-      self._stringUnionFind = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
-      self._stringLiberties = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
-      self._stringSizes = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
+        self._stringUnionFind = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
+        self._stringLiberties = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
+        self._stringSizes = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
 
-      self._stonesBLACK = set()
-      self._stonesWHITE = set()
-      self._empties = set(range(MyBoard.__BOARDSIZE **2))
+        self._stonesBLACK = set()
+        self._stonesWHITE = set()
+        self._empties = set(range(MyBoard.__BOARDSIZE **2))
 
-      # Zobrist values for the hashes. I use np.int64 to be machine independant
-      self._positionHashes = np.empty((MyBoard.__BOARDSIZE**2, 2), dtype='int64')
-      for x in range(MyBoard.__BOARDSIZE**2):
+        # Zobrist values for the hashes. I use np.int64 to be machine independant
+        self._positionHashes = np.empty((MyBoard.__BOARDSIZE**2, 2), dtype='int64')
+        for x in range(MyBoard.__BOARDSIZE**2):
             for c in range(2):
                 self._positionHashes[x][c] = getProperRandom()
-      self._currentHash = getProperRandom() 
-      self._passHash = getProperRandom() 
+        self._currentHash = getProperRandom() 
+        self._passHash = getProperRandom() 
 
-      self._seenHashes = set()
+        self._seenHashes = set()
 
-      self._historyMoveNames = []
-      self._trailMoves = [] # data structure used to push/pop the moves
+        self._historyMoveNames = []
+        self._trailMoves = [] # data structure used to push/pop the moves
 
-      #Building fast structures for accessing neighborhood
-      self._neighbors = []
-      self._neighborsEntries = []
-      for nl in [self._get_neighbors(fcoord) for fcoord in range(MyBoard.__BOARDSIZE**2)] :
-          self._neighborsEntries.append(len(self._neighbors))
-          for n in nl:
-              self._neighbors.append(n)
-          self._neighbors.append(-1) # Sentinelle
-      self._neighborsEntries = np.array(self._neighborsEntries, dtype='int16')
-      self._neighbors = np.array(self._neighbors, dtype='int8')
+        #Building fast structures for accessing neighborhood
+        self._neighbors = []
+        self._neighborsEntries = []
+        for nl in [self._get_neighbors(fcoord) for fcoord in range(MyBoard.__BOARDSIZE**2)] :
+            self._neighborsEntries.append(len(self._neighbors))
+            for n in nl:
+                self._neighbors.append(n)
+            self._neighbors.append(-1) # Sentinelle
+        self._neighborsEntries = np.array(self._neighborsEntries, dtype='int16')
+        self._neighbors = np.array(self._neighbors, dtype='int8')
 
-    
+
 
     ##########################################################
     ##########################################################
@@ -213,8 +214,8 @@ class MyBoard:
         extremelly costly to check. Thus, you should use weak_legal_moves that does not check the superko and actually
         check the return value of the push() function that can return False if the move was illegal due to superKo.
         '''
-        moves = [m for m in self._empties if not self._is_suicide(m, self._nextPlayer) and 
-                not self._is_super_ko(m, self._nextPlayer)[0]]
+        moves = [m for m in self._empties if not self._is_suicide(m, self._nextPlayer) 
+                and not self._is_super_ko(m, self._nextPlayer)[0]]
         moves.append(-1) # We can always ask to pass
         return moves
 
@@ -273,6 +274,7 @@ class MyBoard:
         else:
             if self._lastPlayerHasPassed:
                 self._gameOver = True
+                self._winner = self._nextPlayer
             else:
                 self._lastPlayerHasPassed = True
             self._currentHash ^= self._passHash
@@ -286,9 +288,6 @@ class MyBoard:
             assert len(self._stonesWHITE) == self._nbWHITE
 
         return True
-    
-    def next_player(self):
-        return self._nextPlayer
     
     def reset(self):
         self.__init__()
@@ -407,6 +406,7 @@ class MyBoard:
 
     def _pushBoard(self):
         currentStatus = []
+        currentStatus.append(self._winner)
         currentStatus.append(self._stonesWHITE.copy())
         currentStatus.append(self._stonesBLACK.copy())
         currentStatus.append(self._nbLiberties.copy())
@@ -445,6 +445,7 @@ class MyBoard:
         self._nbLiberties = oldStatus.pop()
         self._stonesBLACK = oldStatus.pop()
         self._stonesWHITE = oldStatus.pop()
+        self._winner = oldStatus.pop()
         self._historyMoveNames.pop()
 
     def _getPositionHash(self, fcoord, color):
@@ -832,6 +833,12 @@ class MyBoard:
 
         ########
 
+    @property
+    def next_player(self):
+        return self._nextPlayer
+
+        ########
+
     def nb_stones(self, color:int) -> int:
         if color == MyBoard.__WHITE:
             return self._nbWHITE
@@ -845,7 +852,6 @@ class MyBoard:
     def nb_liberties_at(self, fcoord:int) -> int:
         ''' MyBoard._stringLiberties property. Get the number of liberties for a stone at the coordinates {fcoord}.'''
         return self._stringLiberties[fcoord] 
-
 
         ########
 
@@ -865,3 +871,63 @@ class MyBoard:
             return self._stonesBLACK
         else:
             return self._stonesWHITE
+
+        ########
+
+    @property
+    def winner(self):
+        if MyBoard.__DEBUG:
+            assert self._winner != MyBoard.__EMPTY 
+        return self._winner
+
+        ########
+
+    @property
+    def EMPTY(self):
+        return self.__EMPTY
+
+        ########
+
+    def is_eye(self, fcoord, color) -> bool:
+        if self._board[fcoord] is not None:
+            return False
+
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            n = self._neighbors[i]
+            if n != color:
+                return False
+            i += 1
+        
+        x, y  = unflatten(fcoord)
+        corners = []
+        friendly_corner = 0
+        off_board_corner = 0
+
+        if self._is_on_board(x+1, y+1):
+            corners.append(flatten((x+1, y+1)))
+        else:
+            off_board_corner += 1
+        if self._is_on_board(x+1, y-1):
+            corners.append(flatten((x+1, y-1)))
+        else:
+            off_board_corner += 1
+        if self._is_on_board(x-1, y+1):
+            corners.append(flatten((x-1, y+1)))
+        else: 
+            off_board_corner += 1
+        if self._is_on_board(x-1, y-1):
+            corners.append(flatten((x-1, y-1)))
+        else:
+            off_board_corner += 1
+
+        for c in corners:
+            if self._board[fcoord] == color:
+                friendly_corner += 1
+
+        if off_board_corners > 0:
+            return ((off_board_corners + friendly_corners) == 4)
+        return (friendly_corners >= 3)
+
+       
+
