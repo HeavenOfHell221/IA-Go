@@ -22,7 +22,7 @@ class myPlayer(PlayerInterface):
 
     def __init__(self):
         self._board = MyBoard()
-        self._mycolor = None
+        self._myColor = None
         self._opponent = None
         self._nbMove = 0
         self._currentAlgo = None
@@ -39,7 +39,7 @@ class myPlayer(PlayerInterface):
 
     def newGame(self, color):
         self.__init__()
-        self._mycolor = color
+        self._myColor = color
         self._opponent = MyBoard.flip(color)
 
         ########
@@ -67,7 +67,7 @@ class myPlayer(PlayerInterface):
         ########
 
     def endGame(self, winner):
-        if self._mycolor == winner:
+        if self._myColor == winner:
             print("I won!!!")
         else:
             print("I lost :(!!")
@@ -86,9 +86,7 @@ class myPlayer(PlayerInterface):
         ########
 
     def _get_move(self):
-        #self._currentAlgo = MonteCarlo(self._board, self._mycolor)
-        
-        self._currentAlgo = ItDeep(board=self._board, duration=5)
+        self._currentAlgo = ItDeep(board=self._board, myColor=self._myColor, duration=7)
         move = self._currentAlgo.get_next_move()
         return move
 

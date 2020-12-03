@@ -30,6 +30,7 @@
 from __future__ import print_function # Used to help cython work well
 import numpy as np
 import random
+from Modules.aliasesType import *
 
 def getProperRandom():
     ''' Gets a proper 64 bits random number (ints in Python are not the ideal toy to play with int64)'''
@@ -162,8 +163,6 @@ class MyBoard:
         self._neighborsEntries = np.array(self._neighborsEntries, dtype='int16')
         self._neighbors = np.array(self._neighbors, dtype='int8')
 
-
-
     ##########################################################
     ##########################################################
     ''' Simple helper function to directly access the board.
@@ -227,6 +226,11 @@ class MyBoard:
         If you use a move from this list, you have to check if push(m) was True or False and then immediatly pop 
         it if it is False (meaning the move was superKO.'''
         moves = [m for m in self._empties if not self._is_suicide(m, self._nextPlayer)]
+        moves.append(-1) # We can always ask to pass
+        return moves
+
+    def weak_eye_legal_moves(self):
+        moves = [m for m in self._empties if (not self._is_suicide(m, self._nextPlayer) and not self.is_eye(m, self._nextPlayer))]
         moves.append(-1) # We can always ask to pass
         return moves
 
@@ -452,7 +456,7 @@ class MyBoard:
         return self._positionHashes[fcoord][color-1]
 
     # Used only in init to build the neighborsEntries datastructure
-    def _get_neighbors(self, fcoord):
+    def _get_neighbors(self, fcoord) -> FlattenMoves:
         x, y = MyBoard.unflatten(fcoord)
         neighbors = ((x+1, y), (x-1, y), (x, y+1), (x, y-1))
         return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
@@ -533,7 +537,7 @@ class MyBoard:
                         stringWithNoLiberties.append(stringNumber)
                         self._nbStrings[otherColor] -= 1
             i += 1
-
+        
         return stringWithNoLiberties
 
     def _is_on_board(self,x,y):
@@ -888,45 +892,46 @@ class MyBoard:
 
         ########
 
+    def _get_corners(self, x, y):
+        corners = []
+        if self._is_on_board(x+1, y+1):
+            corners.append(MyBoard.flatten((x+1, y+1)))
+        if self._is_on_board(x+1, y-1):
+            corners.append(MyBoard.flatten((x+1, y-1)))
+        if self._is_on_board(x-1, y+1):
+            corners.append(MyBoard.flatten((x-1, y+1)))
+        if self._is_on_board(x-1, y-1):
+            corners.append(MyBoard.flatten((x-1, y-1)))
+        return corners
+
+        ########
+
     def is_eye(self, fcoord, color) -> bool:
-        if self._board[fcoord] is not None:
+        if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
             return False
 
-        i = self._neighborsEntries[fcoord]
+        # On regarde les 4 voisins
+        # Si un voisin est d'une autre couleur que la notre, ce n'est pas un oeuil 
+        i = self._neighborsEntries[fcoord] 
         while self._neighbors[i] != -1:
-            n = self._neighbors[i]
-            if n != color:
+            fn = self._neighbors[i] 
+            if  self._board[fn] != color:
                 return False
             i += 1
         
-        x, y  = unflatten(fcoord)
-        corners = []
-        friendly_corner = 0
-        off_board_corner = 0
-
-        if self._is_on_board(x+1, y+1):
-            corners.append(flatten((x+1, y+1)))
-        else:
-            off_board_corner += 1
-        if self._is_on_board(x+1, y-1):
-            corners.append(flatten((x+1, y-1)))
-        else:
-            off_board_corner += 1
-        if self._is_on_board(x-1, y+1):
-            corners.append(flatten((x-1, y+1)))
-        else: 
-            off_board_corner += 1
-        if self._is_on_board(x-1, y-1):
-            corners.append(flatten((x-1, y-1)))
-        else:
-            off_board_corner += 1
+        x, y  = MyBoard.unflatten(fcoord)
+        corners = self._get_corners(x, y)
+        friendly_corners = 0
+        off_board_corners = 4 - len(corners)
 
         for c in corners:
-            if self._board[fcoord] == color:
-                friendly_corner += 1
+            if self._board[c] == color:
+                friendly_corners += 1
 
         if off_board_corners > 0:
-            return ((off_board_corners + friendly_corners) == 4)
+            n = off_board_corners + friendly_corners
+            return (n == 4)
+
         return (friendly_corners >= 3)
 
        

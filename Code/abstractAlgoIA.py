@@ -50,23 +50,16 @@ class AbstractAlgoIA(AbstractClass):
     def legal_moves(self) -> FlattenMoves:
         return self.__board.legal_moves()
 
+        #########
+    
+    def weak_eye_legal_moves(self) -> FlattenMoves:
+        return self.__board.weak_eye_legal_moves()
+
         ########
 
     @property
     def currentHash(self) -> int:
         return self.__board.currentHash
-
-        ########
-
-    @property
-    def nbStoneWhite(self) -> int:
-        return self.__board.nbStoneWhite
-
-        ########
-
-    @property
-    def nbStoneBlack(self) -> int:
-        return self.__board.nbStoneBlack
 
         ########
 
@@ -90,7 +83,7 @@ class AbstractAlgoIA(AbstractClass):
 
         ########
 
-    def switch_color(self, color:int) -> int:
+    def opponent_color(self, color:int) -> int:
         return MyBoard.flip(color)
 
         ########
@@ -144,5 +137,5 @@ class AbstractAlgoIA(AbstractClass):
         ########
 
     def is_eye(self, fcoord, color) -> bool:
-        return self.__board.is_eye(fcoordn, color)
+        return self.__board.is_eye(fcoord, color)
         
