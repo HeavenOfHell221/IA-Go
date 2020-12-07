@@ -24,10 +24,7 @@ class myPlayer(PlayerInterface):
         self._board = MyBoard()
         self._myColor = None
         self._opponent = None
-        self._nbMove = 0
         self._currentAlgo = None
-        self._myLastMove = None
-        self._oppenentLastMove = None
 
     ############################################
     '''          public functions            '''
@@ -49,10 +46,8 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
         move = self._get_move()
-        self._myLastMove = move
         self._board.push(move)
         self._display_move(move)
-        self._nbMove += 1
         return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
 
         ########
@@ -60,7 +55,6 @@ class myPlayer(PlayerInterface):
     def playOpponentMove(self, move):
         print("Opponent played ", move) # New here
         # the board needs an internal represetation to push the move.  Not a string
-        self._oppenentLastMove = move
         m = MyBoard.name_to_flat(move)
         self._board.push(m) 
 
@@ -86,7 +80,7 @@ class myPlayer(PlayerInterface):
         ########
 
     def _get_move(self):
-        self._currentAlgo = ItDeep(board=self._board, myColor=self._myColor, duration=7)
+        self._currentAlgo = ItDeep(board=self._board, color=self._myColor, duration=7)
         move = self._currentAlgo.get_next_move()
         return move
 

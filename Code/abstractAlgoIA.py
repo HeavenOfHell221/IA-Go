@@ -5,7 +5,6 @@ from random import choice
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
 from Modules.aliasesType import *
-import copy
 
 class AbstractAlgoIA(AbstractClass):
 
@@ -63,26 +62,6 @@ class AbstractAlgoIA(AbstractClass):
 
         ########
 
-    def nb_stones(self, color:int) -> int:
-        return self.__board.nb_stones(color)
-
-        ########
-
-    def nb_liberties_at(self, fcoord:FlattenMove) -> int:
-        return self.__board.nb_liberties_at(fcoord) 
-
-        ########
-
-    def nb_liberties(self, color:int) -> int:
-        return self.__board.nb_liberties(color)
-
-        ########
-
-    def nb_strings(self, color:int) -> int:
-        return self.__board.nb_strings(color)
-
-        ########
-
     def opponent_color(self, color:int) -> int:
         return MyBoard.flip(color)
 
@@ -101,11 +80,6 @@ class AbstractAlgoIA(AbstractClass):
 
     def name_to_flat(self, coord) -> int:
         return MyBoard.name_to_flat(coord)
-
-        ########
-
-    def deepcopy_board(self) -> MyBoard:
-        return copy.deepcopy(self.__board)
 
         ########
 
@@ -138,4 +112,15 @@ class AbstractAlgoIA(AbstractClass):
 
     def is_eye(self, fcoord, color) -> bool:
         return self.__board.is_eye(fcoord, color)
-        
+
+        ########
+
+    def nb_stones(self, color):
+        return self.__board.nb_stones(color)
+
+    def weak_strings(self):
+        return self.__board.weakStrings
+
+    @property
+    def WHITE(self):
+        return self.__board.WHITE

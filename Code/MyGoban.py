@@ -31,10 +31,22 @@ from __future__ import print_function # Used to help cython work well
 import numpy as np
 import random
 from Modules.aliasesType import *
+from copy import deepcopy
 
 def getProperRandom():
     ''' Gets a proper 64 bits random number (ints in Python are not the ideal toy to play with int64)'''
     return np.random.randint(np.iinfo(np.int64).max, dtype='int64') 
+
+class String():
+
+    def __init__(self, color, liberties, stones):
+        self.color = color
+        self.liberties = liberties
+        self.stones = stones
+
+    def __repr__(self):
+        return f"[color={self.color}, liberties={self.liberties}, stones={self.stones}]"
+
 
 class MyBoard:
     ''' GO MyBoard class to implement your (simple) GO player.'''
@@ -93,7 +105,7 @@ class MyBoard:
         if fcoord == -1: return 'PASS'
         return MyBoard.coord_to_name(MyBoard.unflatten(fcoord))
 
-    ##########################################################
+  ##########################################################
     ##########################################################
     '''Just a couple of helper functions about who has to play next'''
 
@@ -111,19 +123,19 @@ class MyBoard:
             return "white"
         return "???"
 
-    ##########################################################
+    ############  ##############################################
     ##########################################################
 
     def __init__(self):
-        ''' Main constructor. Instantiate all non static variables.'''
+        ''' Main constructor. InstantiateMyBoard all non static variables.'''
         self._winner = MyBoard.__EMPTY
         self._nbWHITE = 0
         self._nbBLACK = 0
         self._capturedWHITE = 0
         self._capturedBLACK = 0
 
-        self._nbLiberties = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
-        self._nbStrings = {MyBoard.__WHITE:0 , MyBoard.__BLACK:0}
+        self._strings = {MyBoard.__WHITE: [], MyBoard.__BLACK: []}
+        self._weakStrings = set()
 
         self._nextPlayer = self.__BLACK
         self._board = np.zeros((MyBoard.__BOARDSIZE**2), dtype='int8')
@@ -155,6 +167,9 @@ class MyBoard:
         #Building fast structures for accessing neighborhood
         self._neighbors = []
         self._neighborsEntries = []
+        self._corners = []
+        self._cornersEntries = []
+
         for nl in [self._get_neighbors(fcoord) for fcoord in range(MyBoard.__BOARDSIZE**2)] :
             self._neighborsEntries.append(len(self._neighbors))
             for n in nl:
@@ -162,6 +177,18 @@ class MyBoard:
             self._neighbors.append(-1) # Sentinelle
         self._neighborsEntries = np.array(self._neighborsEntries, dtype='int16')
         self._neighbors = np.array(self._neighbors, dtype='int8')
+
+        for nl in [self._get_corners(fcoord) for fcoord in range(MyBoard.__BOARDSIZE**2)] :
+            self._cornersEntries.append(len(self._corners))
+            for n in nl:
+                self._corners.append(n)
+            self._corners.append(-1) # Sentinelle
+        self._cornersEntries = np.array(self._cornersEntries, dtype='int16')
+        self._corners = np.array(self._corners, dtype='int8')
+
+    @property
+    def weakStrings(self):
+        return self._weakStrings
 
     ##########################################################
     ##########################################################
@@ -263,12 +290,18 @@ class MyBoard:
             if alreadySeen: 
                 self._historyMoveNames.append(self.flat_to_name(fcoord))
                 return False
-            captured = self._put_stone(fcoord, self._nextPlayer)
+
+            (nbEmpty, nbSameColor, nbOtherColor) = self.compute_liberties(fcoord, self._nextPlayer)
+            captured = self._put_stone(fcoord, self._nextPlayer, (nbEmpty, nbSameColor, nbOtherColor))
+            captured_objet = self._put_stone_object(fcoord, self._nextPlayer, (nbEmpty, nbSameColor, nbOtherColor))
 
             # captured is the list of Strings that have 0 liberties
             for fc in captured:
                 self._capture_string(fc)
 
+            for fc in captured_objet:
+                self._capture_string_object(fc)
+            
             assert tmpHash == self._currentHash
             self._lastPlayerHasPassed = False
             if self._nextPlayer == self.__WHITE:
@@ -286,10 +319,6 @@ class MyBoard:
         self._seenHashes.add(self._currentHash)
         self._historyMoveNames.append(self.flat_to_name(fcoord))
         self._nextPlayer = MyBoard.flip(self._nextPlayer)
-
-        if MyBoard.__DEBUG:
-            assert len(self._stonesBLACK) == self._nbBLACK
-            assert len(self._stonesWHITE) == self._nbWHITE
 
         return True
     
@@ -410,11 +439,10 @@ class MyBoard:
 
     def _pushBoard(self):
         currentStatus = []
+        currentStatus.append(deepcopy(self._strings[MyBoard.__WHITE]))
+        currentStatus.append(deepcopy(self._strings[MyBoard.__BLACK]))
+        currentStatus.append(deepcopy(self._weakStrings))
         currentStatus.append(self._winner)
-        currentStatus.append(self._stonesWHITE.copy())
-        currentStatus.append(self._stonesBLACK.copy())
-        currentStatus.append(self._nbLiberties.copy())
-        currentStatus.append(self._nbStrings.copy())
         currentStatus.append(self._nbWHITE)
         currentStatus.append(self._nbBLACK)
         currentStatus.append(self._capturedWHITE)
@@ -445,11 +473,10 @@ class MyBoard:
         self._capturedWHITE = oldStatus.pop()
         self._nbBLACK = oldStatus.pop()
         self._nbWHITE = oldStatus.pop()
-        self._nbStrings = oldStatus.pop()
-        self._nbLiberties = oldStatus.pop()
-        self._stonesBLACK = oldStatus.pop()
-        self._stonesWHITE = oldStatus.pop()
         self._winner = oldStatus.pop()
+        self._weakStrings = oldStatus.pop()
+        self._strings[MyBoard.__BLACK] = oldStatus.pop()
+        self._strings[MyBoard.__WHITE] = oldStatus.pop()
         self._historyMoveNames.pop()
 
     def _getPositionHash(self, fcoord, color):
@@ -460,6 +487,12 @@ class MyBoard:
         x, y = MyBoard.unflatten(fcoord)
         neighbors = ((x+1, y), (x-1, y), (x, y+1), (x, y-1))
         return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
+
+    # Used only in init to build the cornersEntries datastructure
+    def _get_corners(self, fcoord) -> FlattenMoves:
+        x, y = MyBoard.unflatten(fcoord)
+        corners = ((x+1, y+1), (x-1, y-1), (x-1, y+1), (x+1, y-1))
+        return [MyBoard.flatten(c) for c in corners if self._is_on_board(c[0], c[1])]
 
     # for union find structure, recover the number of the current string of stones
     def _getStringOfStone(self, fcoord):
@@ -484,40 +517,46 @@ class MyBoard:
         assert self._stringUnionFind[str2] == -1
         self._stringUnionFind[str2] = str1
 
-    def _put_stone(self, fcoord, color):
+    def _put_stone_object(self, fcoord, color, allLiberties):
+        (nbEmpty, nbSameColor, nbOtherColor) = allLiberties
+        stringWithNoLiberties = []
+        newString = self.create_string(color=color, liberties=nbEmpty, stones=set([fcoord]))
+        
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            fn = self._neighbors[i]
+            cell = self._board[fn]
+
+            if  cell == color:
+
+                s = self.find_string(fn, cell)
+                self.add_liberties(s, -1)
+                if s is not newString:
+                    newString = self.merge_string(s, newString)
+                
+            elif cell != MyBoard.__EMPTY:
+
+                s = self.find_string(fn, cell)
+                self.add_liberties(s, -1)
+                if s.liberties == 0:
+                    if s not in stringWithNoLiberties:
+                        stringWithNoLiberties.append(s)
+            i += 1
+
+        return stringWithNoLiberties
+                      
+
+    def _put_stone(self, fcoord, color, allLiberties):
+        (nbEmpty, nbSameColor, nbOtherColor) = allLiberties
         self._board[fcoord] = color
         self._currentHash ^= self._getPositionHash(fcoord, color)
         if self.__DEBUG:
             assert fcoord in self._empties
         self._empties.remove(fcoord)
 
-        if self._nextPlayer == MyBoard.__WHITE:
-            self._stonesWHITE.add(fcoord)
-        else:
-            self._stonesBLACK.add(fcoord)
-
-        otherColor = MyBoard.flip(color)
-        nbEmpty = 0
-        nbSameColor = 0
-        nbOtherColor = 0
-        i = self._neighborsEntries[fcoord]
-        while self._neighbors[i] != -1:
-            n = self._board[self._neighbors[i]]
-            if  n == MyBoard.__EMPTY:
-                nbEmpty += 1
-            elif n == color:
-                nbSameColor += 1
-            elif n == otherColor:
-                nbOtherColor += 1
-            i += 1
-
         currentString = fcoord
-        self._stringLiberties[currentString] = nbEmpty              
+        self._stringLiberties[currentString] = nbEmpty             
         self._stringSizes[currentString] = 1
-        self._nbLiberties[color] += (nbEmpty - nbSameColor)
-        self._nbLiberties[otherColor] -= (nbOtherColor)
-        self._nbStrings[color] += 1
-
         stringWithNoLiberties = [] # String to capture (if applies)
         i = self._neighborsEntries[fcoord]
         while self._neighbors[i] != -1:
@@ -527,7 +566,6 @@ class MyBoard:
                 self._stringLiberties[stringNumber] -= 1
                 if currentString != stringNumber:
                     self._merge_strings(stringNumber, currentString)
-                    self._nbStrings[color] -= 1
                 currentString = stringNumber
             elif self._board[fn] != MyBoard.__EMPTY: # Other color
                 stringNumber = self._getStringOfStone(fn)
@@ -535,13 +573,15 @@ class MyBoard:
                 if self._stringLiberties[stringNumber] == 0:
                     if stringNumber not in stringWithNoLiberties: # We may capture more than one string
                         stringWithNoLiberties.append(stringNumber)
-                        self._nbStrings[otherColor] -= 1
             i += 1
-        
+
         return stringWithNoLiberties
+
+
 
     def _is_on_board(self,x,y):
         return x >= 0 and x < MyBoard.__BOARDSIZE and y >= 0 and y < MyBoard.__BOARDSIZE
+
 
     def _is_suicide(self, fcoord, color):
         opponent = MyBoard.flip(color)
@@ -599,10 +639,8 @@ class MyBoard:
         opponent = MyBoard.flip(color)
         while self._neighbors[i] != -1:
             fn = self._neighbors[i]
-            #print("superko looks at ", self.coord_to_name(fn), "for move", self.coord_to_name(fcoord))
             if self._board[fn] == opponent:
                 s = self._getStringOfStone(fn)
-                #print("superko sees string", self.coord_to_name(s))
                 if s not in libertiesOpponents:
                     libertiesOpponents[s] = self._stringLiberties[s] - 1
                 else:
@@ -611,12 +649,9 @@ class MyBoard:
 
         for s in libertiesOpponents:
             if libertiesOpponents[s] == 0:
-                #print("superko computation for move ", self.coord_to_name(fcoord), ":")
                 for fn in self._breadthSearchString(s):
-                    #print(self.coord_to_name(fn)+" ", end="")
                     assert self._board[fn] == opponent
                     tmpHash ^= self._getPositionHash(fn, opponent)
-                #print()
 
         if tmpHash in self._seenHashes:
             return True, tmpHash
@@ -688,6 +723,20 @@ class MyBoard:
             return '.'
 
 
+    def _capture_string_object(self, string):
+        for stone in string.stones:
+            i = self._neighborsEntries[stone]
+            while self._neighbors[i] != -1:
+                fn = self._neighbors[i]
+                cell = self._board[fn]
+                if cell != MyBoard.__EMPTY:
+                    s = self.find_string(fn, cell)
+                    if s is not string: 
+                        s.liberties += 1
+                i += 1
+        self.delete_string(string)
+
+
     '''
     Internally, the board has a redundant information by keeping track of strings of stones.
     '''
@@ -701,11 +750,9 @@ class MyBoard:
             if self._nextPlayer == MyBoard.__WHITE:
                 self._capturedBLACK += 1
                 self._nbBLACK -= 1
-                self._stonesBLACK.remove(s)
             else:
                 self._capturedWHITE += 1
                 self._nbWHITE -= 1
-                self._stonesWHITE.remove(s)
             self._currentHash ^= self._getPositionHash(s, self._board[s])
             self._board[s] = self.__EMPTY
             self._empties.add(s)
@@ -717,10 +764,6 @@ class MyBoard:
                     st = self._getStringOfStone(fn)
                     if st != s:
                         self._stringLiberties[st] += 1
-                        if self._board[fn] == MyBoard.__BLACK:
-                            self._nbLiberties[MyBoard.__BLACK] += 1
-                        else:
-                            self._nbLiberties[MyBoard.__WHITE] += 1
                 i += 1
 
             self._stringUnionFind[s] = -1
@@ -849,7 +892,7 @@ class MyBoard:
         elif color == MyBoard.__BLACK:
             return self._nbBLACK
         else:
-            return (MyBoard.__BOARDSIZE - (self._nbBLACK + self._nbWHITE))
+            return len(self._empties)
 
         ########
 
@@ -870,11 +913,7 @@ class MyBoard:
         ########
 
     def stones_list(self, color:int) -> set:
-        assert color != MyBoard.__EMPTY
-        if color == MyBoard.__BLACK:
-            return self._stonesBLACK
-        else:
-            return self._stonesWHITE
+        return self._stones[color]
 
         ########
 
@@ -892,17 +931,15 @@ class MyBoard:
 
         ########
 
-    def _get_corners(self, x, y):
-        corners = []
-        if self._is_on_board(x+1, y+1):
-            corners.append(MyBoard.flatten((x+1, y+1)))
-        if self._is_on_board(x+1, y-1):
-            corners.append(MyBoard.flatten((x+1, y-1)))
-        if self._is_on_board(x-1, y+1):
-            corners.append(MyBoard.flatten((x-1, y+1)))
-        if self._is_on_board(x-1, y-1):
-            corners.append(MyBoard.flatten((x-1, y-1)))
-        return corners
+    @property
+    def WHITE(self):
+        return self.__WHITE
+
+        ########
+
+    @property
+    def BLACK(self):
+        return self.__BLACK
 
         ########
 
@@ -914,25 +951,89 @@ class MyBoard:
         # Si un voisin est d'une autre couleur que la notre, ce n'est pas un oeuil 
         i = self._neighborsEntries[fcoord] 
         while self._neighbors[i] != -1:
-            fn = self._neighbors[i] 
-            if  self._board[fn] != color:
+            if  self._board[self._neighbors[i]] != color:
                 return False
             i += 1
         
-        x, y  = MyBoard.unflatten(fcoord)
-        corners = self._get_corners(x, y)
+        off_board_corners = 4 
         friendly_corners = 0
-        off_board_corners = 4 - len(corners)
-
-        for c in corners:
-            if self._board[c] == color:
-                friendly_corners += 1
-
+        
+        i = self._cornersEntries[fcoord]
+        while self._corners[i] != -1:
+            if self._board[self._corners[i]] == color:
+                friendly_corners += 1 
+            off_board_corners -= 1
+            i += 1
+        
         if off_board_corners > 0:
             n = off_board_corners + friendly_corners
             return (n == 4)
 
         return (friendly_corners >= 3)
 
-       
 
+       ###########################################################
+       ###########################################################
+       ###########################################################
+       ###########################################################
+
+
+    def create_string(self, color, liberties, stones):
+        s = String(color=color, liberties=liberties, stones=stones)
+        self._strings[color].append(s)
+        if liberties <= 1:
+            self._weakStrings.add(s)
+        return s
+
+    def merge_string(self, s1, s2):
+        self.add_liberties(s1, s2.liberties)
+        s1.stones |= s2.stones
+        self.delete_string(s2)
+        return s1
+
+    def delete_string(self, s):
+        self._strings[s.color].remove(s)
+        if s.liberties <= 1:
+            self._weakStrings.remove(s)
+    
+
+    def find_string(self, fcoord, color):
+        for string in self._strings[color]:
+            if fcoord in string.stones:
+                return string
+        assert False
+
+
+    def compute_liberties(self, fcoord, color):
+        nbEmpty = 0
+        nbSameColor = 0
+        nbOtherColor = 0
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            cell = self._board[self._neighbors[i]]
+            if  cell == MyBoard.__EMPTY:
+                nbEmpty += 1
+            elif cell == color:
+                nbSameColor += 1
+            else:
+                nbOtherColor += 1
+            i += 1
+            
+        return (nbEmpty, nbSameColor, nbOtherColor)
+
+
+    def add_liberties(self, s, count):
+        s.liberties += count
+        if s.liberties < 0:
+            self.pretty_print()
+            print(s)
+            assert False
+
+        if s.liberties <= 1:
+                self._weakStrings.add(s)
+        elif s.liberties > 1:
+                self._weakStrings.discard(s)
+            
+
+
+        

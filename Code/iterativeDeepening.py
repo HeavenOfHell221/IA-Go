@@ -2,10 +2,9 @@
 
 import time
 from MyGoban import MyBoard
-from random import choice
+from random import choice, shuffle
 from abstractAlgoIA import AbstractAlgoIA
 from Modules.aliasesType import *
-from multiprocessing import Process, Array
 import numpy as np
 
 class IterativeDeepening(AbstractAlgoIA):
@@ -13,149 +12,163 @@ class IterativeDeepening(AbstractAlgoIA):
     ############################################
     '''             Constructor              '''
 
-    def __init__(self, board:MyBoard, myColor:int, duration:int):
+    INF = np.inf
+    NINF = np.NINF
+
+    def __init__(self, board:MyBoard, color, duration:int):
         super(IterativeDeepening, self).__init__(board)
         self.__itDeepDuration = duration
-        self.__stopDepth = 1
+        self.__maxDepth = 1
         self.__timeToStop = 0
-        self.__myColor = myColor
-
-        self.__oracle = {}
+        self.__myColor = color
 
 
-    ############################################
-    '''   public functions for myPlayer      '''
+    def get_next_move(self):
+        self.__timeToStop = time.time() + self.__itDeepDuration  
+        maxMoves = []
+        maxScores = []
+
+        while True and self.__maxDepth < 20:
+            print()
+            print(f"Start AlphaBeta with depth max at {self.__maxDepth}")
+            beta = time.time()
+            move, score = self._start_alpha_beta(lastMove=None, depth=self.__maxDepth, alpha=self.NINF, beta=self.INF, maximizingPlayer=True)
+            if score is None:
+                break
+            print(f"Best move is {super(IterativeDeepening, self).flat_to_name(move)} with score : {score} in {round(time.time()-beta, 2)} secondes")
+            self.__maxDepth += 2
+            maxMoves.append(move)
+            maxScores.append(score)
+
+        idxList = np.argwhere(maxScores == np.amax(maxScores)).flatten().tolist()
+        moveSelected = maxMoves[choice(idxList)]   
+        print("moveSelected = ", super(IterativeDeepening, self).flat_to_name(moveSelected))
+        return moveSelected
+        
+
+    def _start_alpha_beta(self, lastMove, depth, alpha, beta, maximizingPlayer):
+        if time.time() >= self.__timeToStop:
+            return None, None
+
+        moves = super().weak_eye_legal_moves()
+        bestMoves = []
+        bestScore = self.NINF
+
+        for m in moves:
+            if super().push(m) == False:
+                super().pop()
+                continue
+
+            value = self._alpha_beta(lastMove=m, depth=depth-1, alpha=alpha, beta=beta, maximizingPlayer=not maximizingPlayer)
+            super().pop()
+
+            if value is None:
+                return None, None
+
+            if value > bestScore:
+                bestScore = value
+                bestMoves.clear()
+                bestMoves.append(m)
+            elif value == bestScore:
+                bestMoves.append(m)
+
+        b = [super(IterativeDeepening, self).flat_to_name(m) for m in bestMoves]
+        print("bestMoves = ", b)
+        print("bestScore = ", bestScore)
+        return choice(bestMoves), bestScore
 
 
-    def get_next_move(self) -> FlattenMove_None:
-        run = True
-        moves = []
-        scores = []
+    def _alpha_beta(self, lastMove, depth, alpha, beta, maximizingPlayer):
+        if time.time() >= self.__timeToStop:
+            return None
 
-        self.__timeToStop = time.time() + self.__itDeepDuration
+        if super().is_game_over():
+            return self.INF if super().winner != super().next_player else self.NINF
 
-        while run :
-            begin = time.time()
-            move, score = self._start_alpha_beta(isFriendLevel=True)
-            print("Move calculated in : ", round(time.time()-begin, 3), "secondes.")
-            if move is not None:
-                print("move:", move, ", score:", score, "depth:", self.__stopDepth)
-                moves.append(move)
-                scores.append(score)
-                self.__stopDepth += 1
+        if depth == 0:
+            return self._board_value(maximizingPlayer, lastMove)
+
+        moves = super().weak_eye_legal_moves()
+
+        maxValue = self.NINF if maximizingPlayer else self.INF
+
+        for m in moves:
+            if super().push(m) == False:
+                super().pop()
+                continue
+
+            currentValue = self._alpha_beta(m, depth-1, alpha, beta, not maximizingPlayer)
+            super().pop()
+            if currentValue is None:
+                return None
+
+            if maximizingPlayer:
+                maxValue = max(maxValue, currentValue)
+                alpha = max(alpha, maxValue)
             else:
-                run = False
-                self.__stopDepth -= 1 # Annulation du dernier AlphaBeta qui n'a pas terminé pour cause de manque de temps
-            
-        idxList = np.argwhere(scores == np.amax(scores)).flatten().tolist()
-        #print("Moves: ", moves)
-        #print("Scores : ", scores)
-        #print("idxList : ", idxList)
-        maxMove = moves[choice(idxList)]    
+                maxValue = min(maxValue, currentValue)
+                beta = min(beta, maxValue)
 
-        return maxMove
-    
+            if alpha >= beta:
+                return maxValue
 
-    #############################################
-    '''         Internal functions            '''
+        return maxValue
 
 
-    def _board_value(self, isFriendLevel: bool) -> int:
+    def _board_value(self, maximizingPlayer, lastMove):
         ''' Heuristique d'un plateau de jeu de GO avec 9x9 cases '''
-        color = super().next_player
+
+        color = self.__myColor
         otherColor = super().opponent_color(color)
 
         nbStone = super().nb_stones(color)
         nbStoneOther = super().nb_stones(otherColor)
 
-        ret = nbStone - nbStoneOther
-
-        return ret if isFriendLevel else ret*-1
-
-        ########
-
-    
-    def _start_alpha_beta(self, isFriendLevel:bool) -> FlattenMove_None:
-        possibleMoves = []
-        possibleScores = []
-        currentDepth = 0
-        maxValue = -np.inf
-
-        moves = super().weak_eye_legal_moves()
-
-        minRange = 0
-        for i in range(minRange, len(moves)):
-            m = moves[i]
-            if super().push(m) == False: # Si le mouvement n'est pas légal
-                super().pop()
-                continue # On passe au mouvement suivant
-            
-            if currentDepth+1 == self.__stopDepth:
-                valueCurrentMove = self._board_value(not isFriendLevel)
-            
-            else:
-                valueCurrentMove = self._alpha_beta(lastMove=m, currentDepth=currentDepth+1, 
-                                                    alpha=-np.inf, beta=np.inf, isFriendLevel=not isFriendLevel)
-            
-            super().pop()
-
-            if valueCurrentMove is None: # Si le temps est écoulé
-                return None, None
-
-            if valueCurrentMove > maxValue:
-                maxValue = valueCurrentMove
-                possibleMoves.clear()
-                possibleScores.clear()
-                possibleMoves.append(m)
-                possibleScores.append(valueCurrentMove)
-            elif valueCurrentMove == maxValue:
-                possibleMoves.append(m)
-                possibleScores.append(valueCurrentMove)
-
-        move = choice(possibleMoves)
-        idx = possibleMoves.index(move)
-        score = possibleScores[idx]
-
-        return move, score
-
-        ########
+        l0 = ['C7', 'G7', 'C3', 'G3']
+        l1 = ['A1', 'J1', 'A9', 'J9']
+        l2 = ['A2', 'B2', 'B1', 'H1', 'H2', 'J2', 'H8', 'H9', 'J8', 'B8', 'B9', 'A8']
+        l3 = ['C1', 'D1', 'E1', 'F1', 'G1', 'H3', 'H4', 'H5', 'H6', 'H7', 'C9', 'D9', 'E9', 'F9', 'G9', 'A3', 'A4', 'A5', 'A6', 'A7']
     
 
-    
-    def _alpha_beta(self, lastMove:FlattenMove, currentDepth:int, alpha:int, beta:int, isFriendLevel:bool):
+        m = super().flat_to_name(lastMove)
 
-        if time.time() >= self.__timeToStop:
-            return None
-
-        if currentDepth == self.__stopDepth or super().is_game_over():
-            return self._board_value(isFriendLevel)
-
-        moves = super().weak_eye_legal_moves()
+        score = 1000
         
-        maxValue = (-np.inf) if isFriendLevel else (np.inf)
+        if lastMove == -1:
+            return -score
 
-        minRange = 0
-        for i in range(minRange, len(moves)):
-            m = moves[i]
-            if super().push(m) == False: # Si le mouvement n'est pas légal
-                super().pop()
-                continue # On passe au mouvement suivant
+        if m in l0:
+            score *= 1.2
+        elif m in l1:
+            score *= 0.2
+        elif m in l2:
+            score *= 0.3
+        elif m in l3:
+            score *= 0.5
 
-            currentValue = self._alpha_beta(lastMove=m, currentDepth=currentDepth+1, 
-                                            alpha=alpha, beta=beta, isFriendLevel=not isFriendLevel)
-            super().pop()
+        nb_my_weakStrings, nb_other_weakStrings = self.get_nb_weak_strings(color)
+       
+        if nb_my_weakStrings > 0:
+            score *= (nb_other_weakStrings / nb_my_weakStrings)*5
 
-            if currentValue is None:
-                return None
+        if nbStoneOther > 0:
+            score *= min((nbStone / nbStoneOther), 1.25)
+        
+        return round(score) if not maximizingPlayer else -round(score)
 
-            if isFriendLevel:
-                maxValue = max(maxValue, currentValue)
-                alpha = max(maxValue, alpha)
+
+
+
+    def get_nb_weak_strings(self, color):
+        weakStrings = super().weak_strings()
+
+        nb_my_weakStrings = 0
+        nb_other_weakStrings = 0
+
+        for s in weakStrings:
+            if s.color == color:
+                nb_my_weakStrings += 1
             else:
-                maxValue = min(maxValue, currentValue)
-                beta = min(maxValue, beta)
+                nb_other_weakStrings += 1
 
-            if alpha >= beta: # On coupe l'arbre
-                break
-
-        return maxValue
+        return nb_my_weakStrings, nb_other_weakStrings
