@@ -612,11 +612,11 @@ class Board:
         print("To Move: ", "black" if self._nextPlayer == Board._BLACK else "white")
         print("Last player has passed: ", "yes" if self._lastPlayerHasPassed else "no")
         print()
-        print("     WHITE (O) has captured %d stones" % self._capturedBLACK)
-        print("     BLACK (X) has captured %d stones" % self._capturedWHITE)
+        print("     WHITE ( ● ) has captured %d stones" % self._capturedBLACK)
+        print("     BLACK ( ○ ) has captured %d stones" % self._capturedWHITE)
         print()
-        print("     WHITE (O) has %d stones" % self._nbWHITE)
-        print("     BLACK (X) has %d stones" % self._nbBLACK)
+        print("     WHITE ( ● ) has %d stones" % self._nbWHITE)
+        print("     BLACK ( ○ ) has %d stones" % self._nbBLACK)
         print()
         if Board._BOARDSIZE == 9:
             specialPoints = [(2,2), (6,2), (4,4), (2,6), (6,6)]
@@ -633,11 +633,11 @@ class Board:
             print("  %d" % line, end="")
             for c in range(Board._BOARDSIZE):
                 p = self._board[Board.flatten((c, Board._BOARDSIZE - l - 1))]
-                ch = '.'
+                ch = ' '
                 if p==Board._WHITE:
-                    ch = 'O'
+                    ch = '●'
                 elif p==Board._BLACK:
-                    ch = 'X'
+                    ch = '○'
                 elif (l,c) in specialPoints:
                     ch = '+'
                 print(" " + ch, end="")

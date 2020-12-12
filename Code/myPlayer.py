@@ -8,15 +8,10 @@ import time
 from MyGoban import MyBoard 
 from random import choice
 from playerInterface import PlayerInterface
-from iterativeDeepening import IterativeDeepening as ItDeep
-from monteCarlo import MonteCarlo 
-from gameOpening import GameOpening
+from itDeepAgent import ItDeepAgent
 
 class myPlayer(PlayerInterface):
-    ''' Example of a random player for the go. The only tricky part is to be able to handle
-    the internal representation of moves given by legal_moves() and used by push() and 
-    to translate them to the GO-move strings "A1", ..., "J8", "PASS". Easy! '''
-    
+
     ############################################
     '''             Constructor              '''
 
@@ -24,7 +19,7 @@ class myPlayer(PlayerInterface):
         self._board = MyBoard()
         self._myColor = None
         self._opponent = None
-        self._currentAlgo = None
+        self._nbMove = 0
 
     ############################################
     '''          public functions            '''
@@ -32,14 +27,10 @@ class myPlayer(PlayerInterface):
     def getPlayerName(self):
         return "Gab & Yo"
 
-        ########
-
     def newGame(self, color):
         self.__init__()
         self._myColor = color
         self._opponent = MyBoard.flip(color)
-
-        ########
     
     def getPlayerMove(self):
         if self._board.is_game_over():
@@ -48,15 +39,15 @@ class myPlayer(PlayerInterface):
         move = self._get_move()
         self._board.push(move)
         self._display_move(move)
+        self._nbMove += 1
         return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
 
         ########
 
     def playOpponentMove(self, move):
-        print("Opponent played ", move) # New here
-        # the board needs an internal represetation to push the move.  Not a string
         m = MyBoard.name_to_flat(move)
         self._board.push(m) 
+        self._nbMove +=1
 
         ########
 
@@ -73,15 +64,13 @@ class myPlayer(PlayerInterface):
 
     def _display_move(self, move):
         # New here: allows to consider internal representations of moves
-        print("I am playing ", self._board.move_to_str(move))
-        print("My current board :")
-        self._board.pretty_print()
-
-        ########
+        #print("I am playing ", self._board.move_to_str(move))
+        #print("My current board :")
+        #self._board.pretty_print()
+        pass
 
     def _get_move(self):
-        self._currentAlgo = ItDeep(board=self._board, color=self._myColor, duration=7)
-        move = self._currentAlgo.get_next_move()
+        agent = ItDeepAgent(board=self._board, color=self._myColor, duration=10)
+        move = agent.get_next_move()
         return move
 
-    
