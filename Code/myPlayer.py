@@ -36,6 +36,13 @@ class myPlayer(PlayerInterface):
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
+
+        m1 = self._board.generate_legal_moves()
+        m2 = self._board.weak_legal_useful_moves()
+        print()
+        print(f"Len Legal moves        : {len(m1)}")
+        print(f"Len Legal Useful moves : {len(m2)}")
+
         move = self._get_move()
         self._board.push(move)
         self._display_move(move)
@@ -70,7 +77,16 @@ class myPlayer(PlayerInterface):
         pass
 
     def _get_move(self):
-        agent = ItDeepAgent(board=self._board, color=self._myColor, duration=10)
+
+        if self._nbMove < 3*9:
+            agent = ItDeepAgent(board=self._board, color=self._myColor, duration=5)
+        elif self._nbMove < 6*9:
+            agent = ItDeepAgent(board=self._board, color=self._myColor, duration=10)
+        elif self._nbMove < 9*9:
+            agent = ItDeepAgent(board=self._board, color=self._myColor, duration=15)
+        else:
+            agent = ItDeepAgent(board=self._board, color=self._myColor, duration=20)
+
         move = agent.get_next_move()
         return move
 

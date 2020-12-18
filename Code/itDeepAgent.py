@@ -53,9 +53,6 @@ class ItDeepAgent(AbstactAgent):
             return None, None
 
         moves = self.__board.weak_legal_useful_moves()
-        #moves2 = self.__board.weak_legal_moves()
-        #print(f"Weak_Legal_Moves        : {[MyBoard.flat_to_name(m) for m in moves2]}")
-        #print(f"Weak_Legal_Useful_Moves : {[MyBoard.flat_to_name(m) for m in moves]}")
         bestMoves = []
         bestScore = self.NINF if maximizingPlayer else self.NINF
 
@@ -90,14 +87,10 @@ class ItDeepAgent(AbstactAgent):
         if time.time() >= self.__timeToStop:
             return None
 
-        if self.__board.is_game_over():
-            return self.INF if self.__board.winner == self.__myColor else self.NINF
-
-        if depth == 0:
+        if depth == 0 or self.__board.is_game_over():
             return self._board_value(maximizingPlayer, lastMove)
 
         moves = self.__board.weak_legal_useful_moves()
-
         maxValue = self.NINF if maximizingPlayer else self.INF
 
         for m in moves:
@@ -118,9 +111,9 @@ class ItDeepAgent(AbstactAgent):
                 beta = min(beta, maxValue)
 
             if alpha >= beta:
-                return maxValue
+                return alpha if maximizingPlayer else beta
 
-        return maxValue
+        return alpha if maximizingPlayer else beta
 
 
     def _board_value(self, maximizingPlayer, lastMove):
@@ -128,11 +121,14 @@ class ItDeepAgent(AbstactAgent):
 
         if maximizingPlayer:
             color = self.__board.nextPlayer
-            othercolor = MyBoard.flip(color)
+            otherColor = MyBoard.flip(color)
         else:
             otherColor = self.__board.nextPlayer
             color = MyBoard.flip(otherColor)
         
+        if self.__board.is_game_over():
+            return self.INF
+
         nbStone = self.__board.nb_stones(color)
         nbStoneOther = self.__board.nb_stones(otherColor)
         nbLiberties = self.__board.nb_liberties(color)
@@ -140,70 +136,63 @@ class ItDeepAgent(AbstactAgent):
         nbStrings = self.__board.len_strings(color)
         nbStringsOther = self.__board.len_strings(otherColor)
 
-
-        l0 = ['C7', 'G7', 'C3', 'G3']
-        l1 = ['A1', 'J1', 'A9', 'J9']
-        l2 = ['A2', 'B2', 'B1', 'H1', 'H2', 'J2', 'H8', 'H9', 'J8', 'B8', 'B9', 'A8']
-        l3 = ['C1', 'D1', 'E1', 'F1', 'G1', 'H3', 'H4', 'H5', 'H6', 'H7', 'C9', 'D9', 'E9', 'F9', 'G9', 'A3', 'A4', 'A5', 'A6', 'A7']
+        bestCell_0 = ['C7', 'G7', 'C3', 'G3']
+        bestCell_1 = ['E2', 'E8', 'B5', 'H5']
+        bestCell_2 = ['E5']
+        worstCell_0 = ['A1', 'J1', 'A9', 'J9']
+        worstCell_1 = ['A2', 'B2', 'B1', 'H1', 'H2', 'J2', 'H8', 'H9', 'J8', 'B8', 'B9', 'A8']
     
         m = self.__board.flat_to_name(lastMove)
+        score = 0
 
-        score = 1000
-        mult = 1
+        if m == 'PASS':
+            return self.NINF
 
-        if lastMove == -1:
-            return 0
+        if m in bestCell_0:
+            score += 3
+        elif m in bestCell_1:
+            score += 2
+        elif m in bestCell_2:
+            score += 1
+        elif m in worstCell_1:
+            score -= 1
+        elif m in worstCell_0:
+            score -= 3
 
-        if m in l0:
-            mult += 0.4
-        elif m in l1:
-            score -= 0.1
-        elif m in l2:
-            score -= 0.2
-        elif m in l3:
-            score -= 0.4
-
-        # Maximiser le ratio de liberté (entre -1 et 1)
+        # Maximiser le ratio de liberté (entre -10 et 10)
         if nbLibertiesOther > 0:
-            mult += (((nbLiberties / (nbLibertiesOther + nbLiberties)) * 2) - 1) 
+            score += round((((nbLiberties / (nbLibertiesOther + nbLiberties)) * 2) - 1) * 10, self.__maxDepth)
 
-        # Maximiser le ratio de pierre (entre -2 et 2)
+        # Maximiser le ratio de pierre (entre -10 et 10)
         if nbStoneOther > 0:
-            mult += (((nbStone / (nbStoneOther + nbStone)) * 2) - 1) * 2
+            score += round((((nbStone / (nbStoneOther + nbStone)) * 2) - 1) * 10, self.__maxDepth)
 
         # Minimiser le ratio de string
-        if nbStrings > 0:
-            mult += (np.clip(nbStringsOther / nbStrings, 0.8, 1.2) - 1)
+        #if nbStrings > 0:
+        #    score += (np.clip(nbStringsOther / nbStrings, 0.8, 1.2) - 1)
 
         # Maximiser les weakStrings
-        nb_my_weakStrings_1, nb_other_weakStrings_1 = self.__board.compute_weak_strings_k_liberties(color, 1)
-        nb_my_weakStrings_2, nb_other_weakStrings_2 = self.__board.compute_weak_strings_k_liberties(color, 2)
-        nb_my_weakStrings_3, nb_other_weakStrings_3 = self.__board.compute_weak_strings_k_liberties(color, 3)
+        (nb_my_weakStrings_1, nb_other_weakStrings_1) = self.__board.compute_weak_strings_k_liberties(color, 1)
+        (nb_my_weakStrings_2, nb_other_weakStrings_2) = self.__board.compute_weak_strings_k_liberties(color, 2)
+        (nb_my_weakStrings_3, nb_other_weakStrings_3) = self.__board.compute_weak_strings_k_liberties(color, 3)
 
         if nb_my_weakStrings_1 > 0:
-            mult -= 1
-        if nb_my_weakStrings_2 > 0:
-            mult -= 0.5
-        if nb_my_weakStrings_3 > 0:
-            mult -= 0.25
-
-        if nb_other_weakStrings_1 > 0:
-            mult += 2
-        if nb_other_weakStrings_2 > 0:
-            mult += 1
-        if nb_other_weakStrings_3 > 0:
-            mult += 0.5
+            score -= 5
+        elif nb_my_weakStrings_2 > 0:
+            score -= 2
+        elif nb_my_weakStrings_3 > 0:
+            score -= 1
         
-
-        #nbDiff = len(self.__board.weak_legal_moves()) - len(self.__board.weak_legal_useful_moves())
-        #mult += (nbDiff*0.5)
-
-        score *= mult
+        if nb_other_weakStrings_1 > 0:
+            score += 4
+        elif nb_other_weakStrings_2 > 0:
+            score += 2
+        elif nb_other_weakStrings_3 > 0:
+            score += 1
 
         if self.__maxDepth <= 1:
-            return round(score/10)
-
-        if self.__maxDepth <= 3:
-            return round(score, 3) 
+            return round(score, 1)
+        elif self.__maxDepth <= 3:
+            return round(score, 3)
 
         return score

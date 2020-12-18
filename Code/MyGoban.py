@@ -280,7 +280,7 @@ class MyBoard:
     def weak_legal_useful_moves(self):
         moves = [m for m in self._empties 
             if (not self._is_suicide(m, self._nextPlayer) and 
-                not self._is_eye_k(m, self._nextPlayer, 0) and 
+                not self.is_eye(m, self._nextPlayer) and 
                 not self._is_useless(m, self._nextPlayer))]
         moves.append(-1) # We can always ask to pass
         return moves
@@ -853,13 +853,14 @@ class MyBoard:
     def nb_strings(self, color:int) -> int:
         return self._nbStrings[color]
 
-    def _is_eye_k(self, fcoord, color, k) -> bool:
+    def is_eye(self, fcoord, color) -> bool:
         if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
             return False
 
         # On regarde les 4 voisins
         # Si un voisin est d'une autre couleur que la notre, ce n'est pas un oeuil 
         i = self._neighborsEntries[fcoord] 
+        n = 0
         while self._neighbors[i] != -1:
             if  self._board[self._neighbors[i]] != color:
                 return False
@@ -877,9 +878,9 @@ class MyBoard:
         
         if off_board_corners > 0:
             n = off_board_corners + friendly_corners
-            return (n == 4-k)
+            return (n == 4)
 
-        return (friendly_corners >= 3-k)
+        return (friendly_corners >= 3)
 
 
     def _is_useless(self, fcoord, color):
