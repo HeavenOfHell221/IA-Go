@@ -49,6 +49,9 @@ class MyBoard:
     __BOARDSIZE = 9 # Used in static methods, do not write it
     __DEBUG = True 
 
+    INF = np.inf
+    NINF = np.NINF
+
     ############################################################################
     ############################################################################
     ''' A set of functions to manipulate the moves from the
@@ -125,8 +128,7 @@ class MyBoard:
         self._capturedWHITE = 0
         self._capturedBLACK = 0
 
-        self._nbLiberties = {MyBoard.__WHITE: 0, MyBoard.__BLACK: 0}
-        self.__strings = {MyBoard.__WHITE: [], MyBoard.__BLACK: []}
+        self._strings = {MyBoard.__WHITE: [], MyBoard.__BLACK: []}
 
         self._nextPlayer = self.__BLACK
         self._board = np.zeros((MyBoard.__BOARDSIZE**2), dtype='int8')
@@ -138,8 +140,8 @@ class MyBoard:
         self._stringLiberties = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
         self._stringSizes = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
 
-        self._stonesBLACK = set()
-        self._stonesWHITE = set()
+        #self._stonesBLACK = set()
+        #self._stonesWHITE = set()
         self._empties = set(range(MyBoard.__BOARDSIZE **2))
 
         # Zobrist values for the hashes. I use np.int64 to be machine independant
@@ -148,7 +150,8 @@ class MyBoard:
             for c in range(2):
                 self._positionHashes[x][c] = getProperRandom()
         self._currentHash = getProperRandom() 
-        self._passHash = getProperRandom() 
+        self._passHashB = getProperRandom() 
+        self._passHashW = getProperRandom() 
 
         self._seenHashes = set()
 
@@ -315,9 +318,9 @@ class MyBoard:
                 self._historyMoveNames.append(self.flat_to_name(fcoord))
                 return False
 
-            (nbEmpty, nbSameColor, nbOtherColor) = self._compute_liberties(fcoord, self._nextPlayer)
+            (nbEmpty, nbSameColor, nbOtherColor, liberties) = self._compute_liberties(fcoord, self._nextPlayer)
             captured = self._put_stone(fcoord, self._nextPlayer, (nbEmpty, nbSameColor, nbOtherColor))
-            captured_objet = self._put_stone_object(fcoord, self._nextPlayer, (nbEmpty, nbSameColor, nbOtherColor))
+            captured_objet = self._put_stone_object(fcoord, self._nextPlayer, (nbEmpty, nbSameColor, nbOtherColor, liberties))
 
             # captured is the list of Strings that have 0 liberties
             for fc in captured:
@@ -338,7 +341,7 @@ class MyBoard:
                 self._winner = self._nextPlayer
             else:
                 self._lastPlayerHasPassed = True
-            self._currentHash ^= self._passHash
+            self._currentHash ^= self._passHashB if self._nextPlayer == MyBoard.__BLACK else self._passHashW
 
         self._seenHashes.add(self._currentHash)
         self._historyMoveNames.append(self.flat_to_name(fcoord))
@@ -442,9 +445,9 @@ class MyBoard:
             for c in range(MyBoard.__BOARDSIZE):
                 p = self._board[MyBoard.flatten((c, MyBoard.__BOARDSIZE - l - 1))]
                 ch = ' '
-                if p==MyBoard.__WHITE:
+                if p == MyBoard.__WHITE:
                     ch = '●'
-                elif p==MyBoard.__BLACK:
+                elif p == MyBoard.__BLACK:
                     ch = '○'
                 elif (l,c) in specialPoints:
                     ch = '+'
@@ -463,9 +466,8 @@ class MyBoard:
 
     def _pushBoard(self):
         currentStatus = []
-        currentStatus.append(self._nbLiberties.copy())
-        currentStatus.append(deepcopy(self.__strings[MyBoard.__WHITE]))
-        currentStatus.append(deepcopy(self.__strings[MyBoard.__BLACK]))
+        currentStatus.append(deepcopy(self._strings[MyBoard.__WHITE]))
+        currentStatus.append(deepcopy(self._strings[MyBoard.__BLACK]))
         currentStatus.append(self._winner)
         currentStatus.append(self._nbWHITE)
         currentStatus.append(self._nbBLACK)
@@ -498,9 +500,8 @@ class MyBoard:
         self._nbBLACK = oldStatus.pop()
         self._nbWHITE = oldStatus.pop()
         self._winner = oldStatus.pop()
-        self.__strings[MyBoard.__BLACK] = oldStatus.pop()
-        self.__strings[MyBoard.__WHITE] = oldStatus.pop()
-        self._nbLiberties = oldStatus.pop()
+        self._strings[MyBoard.__BLACK] = oldStatus.pop()
+        self._strings[MyBoard.__WHITE] = oldStatus.pop()
         self._historyMoveNames.pop()
 
     def _getPositionHash(self, fcoord, color):
@@ -848,10 +849,41 @@ class MyBoard:
             return MyBoard.__BOARDSIZE - self._nbWHITE - self._nbBLACK
 
     def nb_liberties(self, color:int) -> int:
-        return self._nbLiberties[color] 
+        strings = self._strings[color]
+        libs = 0
+        for s in strings:
+            libs += len(s.liberties)
+        return libs
 
     def nb_strings(self, color:int) -> int:
-        return self._nbStrings[color]
+        return len(self._strings[color])
+
+    def get_liberties(self, color:int):
+        strings = set()
+        for s in self._strings[color]:
+            strings |= s.liberties 
+        return strings
+
+    def nb_shared_liberty(self, color, fcoord):
+        ''' Pour une case vide {fcoord}, donne le nombre de string autour de cette case'''
+        
+        assert self._board[fcoord] == MyBoard.__EMPTY
+        n = 0
+        no = 0
+        for s in self._strings[color]:
+            if fcoord in s.liberties:
+                n += 1
+
+        for s in self._strings[MyBoard.flip(color)]:
+            if fcoord in s.liberties:
+                no += 1
+        
+        if self.__DEBUG:
+            assert n == 1 or n == 2 or n == 3 or n == 4
+            assert no == 0 or no == 1 or no == 2 or no == 3
+            assert (n + no) <= 4 and (n + no) >= 1 
+
+        return n, no
 
     def is_eye(self, fcoord, color) -> bool:
         if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
@@ -908,24 +940,25 @@ class MyBoard:
     ############################################################################
     ############################################################################
 
-    ''' Fonctions de gestion des chaînes de pierre contenu dans self.__strings '''
+    ''' Fonctions de gestion des chaînes de pierre contenu dans self._strings '''
 
     def _create_string(self, color, liberties, stones):
         s = String(color=color, liberties=liberties, stones=stones)
-        self.__strings[color].append(s)
+        self._strings[color].append(s)
         return s
 
     def _merge_string(self, s1, s2):
-        s1.liberties += s2.liberties
+        s1.liberties |= s2.liberties
         s1.stones |= s2.stones
         self._delete_string(s2)
         return s1
 
     def _delete_string(self, s):
-        self.__strings[s.color].remove(s)
+        self._strings[s.color].remove(s)
+        del s
 
     def _find_string(self, fcoord, color):
-        for string in self.__strings[color]:
+        for string in self._strings[color]:
             if fcoord in string.stones:
                 return string
         assert False
@@ -939,8 +972,7 @@ class MyBoard:
                 if cell != MyBoard.__EMPTY:
                     s = self._find_string(fn, cell)
                     if s is not string: 
-                        s.liberties += 1
-                        self._nbLiberties[cell] += 1
+                        s.liberties.add(stone)
                 i += 1
         self._delete_string(string)
 
@@ -948,41 +980,43 @@ class MyBoard:
         nbEmpty = 0
         nbSameColor = 0
         nbOtherColor = 0
+        liberties = set()
         i = self._neighborsEntries[fcoord]
         while self._neighbors[i] != -1:
-            cell = self._board[self._neighbors[i]]
+            fn = self._neighbors[i]
+            cell = self._board[fn]
             if  cell == MyBoard.__EMPTY:
                 nbEmpty += 1
+                liberties.add(fn)
             elif cell == color:
                 nbSameColor += 1
             else:
                 nbOtherColor += 1
             i += 1
             
-        return (nbEmpty, nbSameColor, nbOtherColor)
+        return (nbEmpty, nbSameColor, nbOtherColor, liberties)
 
     def compute_weak_strings_k_liberties(self, color, k):
         nbWeakStrings = 0
         nbWeakStringsOpponent = 0
 
-        for s in self.__strings[color]:
-            if s.liberties == k:
+        for s in self._strings[color]:
+            if len(s.liberties) == k:
                 nbWeakStrings += 1
 
-        for s in self.__strings[MyBoard.flip(color)]:
-            if s.liberties == k:
+        for s in self._strings[MyBoard.flip(color)]:
+            if len(s.liberties) == k:
                 nbWeakStringsOpponent += 1
 
         return (nbWeakStrings, nbWeakStringsOpponent)       
 
-    def len_strings(self, color):
-        return len(self.__strings[color])
+    def nb_strings(self, color):
+        return len(self._strings[color])
         
     def _put_stone_object(self, fcoord, color, allLiberties):
-        (nbEmpty, nbSameColor, nbOtherColor) = allLiberties
+        (nbEmpty, nbSameColor, nbOtherColor, lib) = allLiberties
         stringWithNoLiberties = []
-        newString = self._create_string(color=color, liberties=nbEmpty, stones=set([fcoord]))
-        self._nbLiberties[color] += nbEmpty
+        newString = self._create_string(color=color, liberties=lib, stones=set([fcoord]))
 
         i = self._neighborsEntries[fcoord]
         while self._neighbors[i] != -1:
@@ -992,19 +1026,63 @@ class MyBoard:
             if  cell == color:
 
                 s = self._find_string(fn, cell)
-                s.liberties -= 1
-                self._nbLiberties[cell] -= 1
+                s.liberties.discard(fcoord)
                 if s is not newString:
                     newString = self._merge_string(s, newString)
                 
             elif cell != MyBoard.__EMPTY:
 
                 s = self._find_string(fn, cell)
-                s.liberties -= 1
-                self._nbLiberties[cell] -= 1
-                if s.liberties == 0:
+                s.liberties.discard(fcoord)
+                if len(s.liberties) == 0:
                     if s not in stringWithNoLiberties:
                         stringWithNoLiberties.append(s)
             i += 1
 
         return stringWithNoLiberties
+
+
+    def _get_territory_neighbors(self, fcoord):
+        x, y = MyBoard.unflatten(fcoord)
+        neighbors = [   (x-2, y+2), (x-1, y+2), (x, y+2), (x+1, y+2), (x+2, y+2),
+                        (x-2, y+1), (x-1, y+1), (x, y+1), (x+1, y+1), (x+2, y+1),
+                        (x-2, y),   (x-1, y),   (x, y),   (x+1, y),   (x+2, y),
+                        (x-2, y-1), (x-1, y-1), (x, y-1), (x+1, y-1), (x+2, y-1),
+                        (x-2, y-2), (x-1, y-2), (x, y-2), (x+1, y-2), (x+2, y-2)]
+
+        '''neighbors = [   (x-1, y+1), (x, y+1), (x+1, y+1),
+                        (x-1, y),   (x, y),   (x+1, y),
+                        (x-1, y-1), (x, y-1), (x+1, y-1)]'''
+        return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
+
+
+    def compute_territory(self, color):
+        nb_territory_color = 0
+        nb_territory_otherColor = 0
+        nb_territory_dangerous = 0
+        nb_territory_neutral = 0
+
+        for cell in range(0, 81, 1):
+            neighbors = self._get_territory_neighbors(cell)
+            nbColor = 0
+            nbOtherColor = 0
+            nbEmpty = 0
+            for fn in neighbors:
+                if self._board[fn] == color:
+                    nbColor += 1
+                elif self._board[fn] == MyBoard.flip(color):
+                    nbOtherColor += 1
+                else:
+                    nbEmpty += 1
+
+            if (nbColor == 0 and nbOtherColor == 0):
+                nb_territory_neutral += 1
+            elif (nbColor > 0 and nbOtherColor == 0) or (nbColor > nbOtherColor + nbEmpty):
+                nb_territory_color += 1
+            elif (nbColor == 0 and nbOtherColor > 0) or (nbOtherColor > nbColor + nbEmpty):
+                nb_territory_otherColor += 1
+            else:
+                nb_territory_dangerous += 1
+
+        return (nb_territory_color, nb_territory_otherColor, nb_territory_dangerous, nb_territory_neutral)
+

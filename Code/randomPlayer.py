@@ -21,12 +21,13 @@ class myPlayer(PlayerInterface):
         self._myColor = None
         self._opponent = None
         self._nbMove = 0
+        self._lastOpponentMove = None
 
     ############################################
     '''          public functions            '''
 
     def getPlayerName(self):
-        return "Other player"
+        return "Random player"
 
     def newGame(self, color):
         self.__init__()
@@ -39,7 +40,6 @@ class myPlayer(PlayerInterface):
             return "PASS"
         move = self._get_move()
         self._board.push(move)
-        self._display_move(move)
         self._nbMove += 1
         return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
 
@@ -48,6 +48,7 @@ class myPlayer(PlayerInterface):
     def playOpponentMove(self, move):
         m = MyBoard.name_to_flat(move)
         self._board.push(m) 
+        self._lastOpponentMove = move
         self._nbMove +=1
 
         ########
@@ -62,16 +63,8 @@ class myPlayer(PlayerInterface):
     #############################################
     '''         Internal functions            '''
 
-
-    def _display_move(self, move):
-        # New here: allows to consider internal representations of moves
-        #print("I am playing ", self._board.move_to_str(move))
-        #print("My current board :")
-        #self._board.pretty_print()
-        pass
-
     def _get_move(self):
         agent = RandomAgent(board=self._board)
-        move = agent.get_next_move()
+        move = agent.get_next_move(lastOpponentMove=self._lastOpponentMove, evalHandler=None)
         return move
 

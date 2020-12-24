@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-import time
 from MyGoban import MyBoard
-from random import choice
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
-from Modules.aliasesType import *
 
 class AbstactAgent(AbstractClass):
 
@@ -18,5 +15,5 @@ class AbstactAgent(AbstractClass):
     '''     Public functions for myPlayer     '''
 
     @abstractmethod
-    def get_next_move(self):
+    def get_next_move(self, lastOpponentMove, evalHandler):
         pass
