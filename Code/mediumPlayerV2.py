@@ -9,7 +9,9 @@ from MyGoban import MyBoard
 from random import choice
 from playerInterface import PlayerInterface
 from itDeepAgent import ItDeepAgent
-from mediumGobanEval import MediumGobanEval
+from mediumGobanEval import *
+from Modules.colorText import *
+
 
 class myPlayer(PlayerInterface):
 
@@ -36,13 +38,17 @@ class myPlayer(PlayerInterface):
         self._opponentColor = MyBoard.flip(color)
     
     def getPlayerMove(self):
+        print(f"{Normal_Red}")
         if self._board.is_game_over():
             print("Referee told me to play but the game is over!")
             return "PASS"
 
+        print(self._board.compute_territory(self._myColor))
+
         move = self._get_move()
         self._board.push(move)
         self._board.pretty_print()
+        print(f"{Normal_White}")
         self._nbMove += 1
         return MyBoard.flat_to_name(move) # move is an internal representation. To communicate with the interface I need to change if to a string
 
@@ -67,15 +73,16 @@ class myPlayer(PlayerInterface):
 
     def _get_move(self):
         agent = None
-        duration = 15
-
+         
         if self._nbMove < 3*9:
-            duration = 5
+            duration = 15
         elif self._nbMove < 6*9:
-            duration = 10
+            duration = 20
+        else:
+            duration = 25
             
         agent = ItDeepAgent(board=self._board, color=self._myColor, duration=duration)
-        move = agent.get_next_move(self._lastOpponentMove, MediumGobanEval(), incrementStep=2)
+        move = agent.get_next_move(self._lastOpponentMove, MediumGobanEval_V2(), incrementStep=2)
         self._lastMove = move
         return move
 

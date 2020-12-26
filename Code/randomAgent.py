@@ -11,7 +11,7 @@ class RandomAgent(AbstactAgent):
     def __init__(self, board:MyBoard):
         self.__board = board
 
-    def get_next_move(self, lastOpponentMove, evalHandler):
+    def get_next_move(self, lastOpponentMove, evalHandler, incrementStep):
         moves = self.__board.weak_legal_useful_moves()
 
         if len(moves) > 5:

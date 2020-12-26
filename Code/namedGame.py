@@ -42,8 +42,8 @@ stringio = StringIO()
 wrongmovefrom = 0
 
 while not b.is_game_over():
-    print("Referee Board:")
-    b.prettyPrint() 
+    #print("Referee Board:")
+    #b.prettyPrint() 
     print("Before move", nbmoves)
     legals = b.legal_moves() # legal moves are given as internal (flat) coordinates, not A1, A2, ...
     #print("Legal Moves: ", [b.move_to_str(m) for m in legals]) # I have to use this wrapper if I want to print them

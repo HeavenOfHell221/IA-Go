@@ -24,7 +24,6 @@
     https://github.com/maxpumperla/deep_learning_and_the_game_of_go 
     
     I tried to be faster by using more non python data structures (limiting lists and sets), however :)
-
     '''
 
 from __future__ import print_function # Used to help cython work well
@@ -283,10 +282,17 @@ class MyBoard:
     def weak_legal_useful_moves(self):
         moves = [m for m in self._empties 
             if (not self._is_suicide(m, self._nextPlayer) and 
-                not self.is_eye(m, self._nextPlayer) and 
-                not self._is_useless(m, self._nextPlayer))]
+                not self.is_eye(m, self._nextPlayer))]
         moves.append(-1) # We can always ask to pass
         return moves
+
+    '''def weak_legal_useful_moves(self):
+        moves = [m for m in self._empties 
+            if (not self._is_suicide(m, self._nextPlayer) and 
+                not self.is_eye(m, self._nextPlayer) and 
+                not self.is_useless(m, self._nextPlayer))]
+        moves.append(-1) # We can always ask to pass
+        return moves'''
 
     def generate_legal_moves(self):
         ''' See legal_moves description. This is just a wrapper to this function, kept for compatibility.'''
@@ -915,7 +921,7 @@ class MyBoard:
         return (friendly_corners >= 3)
 
 
-    def _is_useless(self, fcoord, color):
+    def is_useless(self, fcoord, color):
         if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
             return False
         
@@ -1013,6 +1019,9 @@ class MyBoard:
     def nb_strings(self, color):
         return len(self._strings[color])
         
+    def get_strings(self, color):
+        return self._strings[color]
+
     def _put_stone_object(self, fcoord, color, allLiberties):
         (nbEmpty, nbSameColor, nbOtherColor, lib) = allLiberties
         stringWithNoLiberties = []
@@ -1044,25 +1053,36 @@ class MyBoard:
 
     def _get_territory_neighbors(self, fcoord):
         x, y = MyBoard.unflatten(fcoord)
-        neighbors = [   (x-2, y+2), (x-1, y+2), (x, y+2), (x+1, y+2), (x+2, y+2),
+        '''neighbors = [   (x-2, y+2), (x-1, y+2), (x, y+2), (x+1, y+2), (x+2, y+2),
                         (x-2, y+1), (x-1, y+1), (x, y+1), (x+1, y+1), (x+2, y+1),
                         (x-2, y),   (x-1, y),   (x, y),   (x+1, y),   (x+2, y),
                         (x-2, y-1), (x-1, y-1), (x, y-1), (x+1, y-1), (x+2, y-1),
-                        (x-2, y-2), (x-1, y-2), (x, y-2), (x+1, y-2), (x+2, y-2)]
+                        (x-2, y-2), (x-1, y-2), (x, y-2), (x+1, y-2), (x+2, y-2)]'''
 
-        '''neighbors = [   (x-1, y+1), (x, y+1), (x+1, y+1),
+        neighbors = [   (x-1, y+1), (x, y+1), (x+1, y+1),
                         (x-1, y),   (x, y),   (x+1, y),
-                        (x-1, y-1), (x, y-1), (x+1, y-1)]'''
+                        (x-1, y-1), (x, y-1), (x+1, y-1)]
         return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
 
 
     def compute_territory(self, color):
+        ''' 
+        Pour chaque cellule vide, calcul à quel territoire elle partient.
+        Only_Color          -> Si la cellule n'a que des voisins de la couleur {color}
+        Only_OtherColor     -> Idem mais avec la couleur opposée
+        Color               -> Si la cellule a une majorité absolue de voisin de la couleur {color} (soit au moins 5 sur 9)
+        OtherColor          -> Idem mais avec la couleur opposée
+        Dangerous           -> La cellule est en conflit (aucun des deux joueurs la possède)
+        ''' 
+
+        nb_territory_only_color = 0
+        nb_territory_only_otherColor = 0
         nb_territory_color = 0
         nb_territory_otherColor = 0
         nb_territory_dangerous = 0
-        nb_territory_neutral = 0
 
         for cell in range(0, 81, 1):
+        #for cell in self._empties:
             neighbors = self._get_territory_neighbors(cell)
             nbColor = 0
             nbOtherColor = 0
@@ -1075,14 +1095,54 @@ class MyBoard:
                 else:
                     nbEmpty += 1
 
-            if (nbColor == 0 and nbOtherColor == 0):
-                nb_territory_neutral += 1
-            elif (nbColor > 0 and nbOtherColor == 0) or (nbColor > nbOtherColor + nbEmpty):
+            if (nbColor > 0 and nbOtherColor == 0):
+                ''' Voisin(s) seulement de notre couleur '''
+                nb_territory_only_color += 1
+            elif (nbColor > nbOtherColor + nbEmpty):
+                ''' Majorité de notre couleur '''
                 nb_territory_color += 1
-            elif (nbColor == 0 and nbOtherColor > 0) or (nbOtherColor > nbColor + nbEmpty):
+            elif (nbColor == 0 and nbOtherColor > 0):
+                ''' Voisin(s) seulement la couleur adverse ''' 
+                nb_territory_only_otherColor += 1
+            elif (nbOtherColor > nbColor + nbEmpty):
+                ''' Majorité de la couleur adverse '''
                 nb_territory_otherColor += 1
             else:
                 nb_territory_dangerous += 1
 
-        return (nb_territory_color, nb_territory_otherColor, nb_territory_dangerous, nb_territory_neutral)
+        return (nb_territory_only_color, nb_territory_only_otherColor, nb_territory_color, nb_territory_otherColor, nb_territory_dangerous)
 
+
+    def get_data(self, color, otherColor):
+        ''' Récupération des données du board '''
+
+        my_nbStones = self.nb_stones(color)
+        other_nbStones = self.nb_stones(otherColor)
+        my_nbLiberties = self.nb_liberties(color)
+        other_nbLiberties = self.nb_liberties(otherColor)
+        my_nbStrings = self.nb_strings(color)
+        other_nbStrings = self.nb_strings(otherColor)
+
+        (my_nbWeakStrings1, other_nbWeakStrings1) = self.compute_weak_strings_k_liberties(color, 1)
+        (my_nbWeakStrings2, other_nbWeakStrings2) = self.compute_weak_strings_k_liberties(color, 2)
+        (my_nbWeakStrings3, other_nbWeakStrings3) = self.compute_weak_strings_k_liberties(color, 3)
+        (my_nbWeakStrings4, other_nbWeakStrings4) = self.compute_weak_strings_k_liberties(color, 4)
+
+        data = {
+            'my_nbStones' : my_nbStones,
+            'my_nbLiberties' : my_nbLiberties,
+            'my_nbStrings' : my_nbStrings,
+            'other_nbStones' : other_nbStones, 
+            'other_nbLiberties' : other_nbLiberties, 
+            'other_nbStrings' : other_nbStrings, 
+            'my_nbWeakStrings1' : my_nbWeakStrings1, 
+            'my_nbWeakStrings2' : my_nbWeakStrings2,
+            'my_nbWeakStrings3' : my_nbWeakStrings3, 
+            'my_nbWeakStrings4' : my_nbWeakStrings4,
+            'other_nbWeakStrings1' : other_nbWeakStrings1,
+            'other_nbWeakStrings2' : other_nbWeakStrings2,
+            'other_nbWeakStrings3' : other_nbWeakStrings3,
+            'other_nbWeakStrings4' : other_nbWeakStrings4 
+        }
+        
+        return data

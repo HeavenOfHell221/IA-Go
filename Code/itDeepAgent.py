@@ -6,6 +6,7 @@ from random import choice, shuffle, uniform
 from abstactAgent import AbstactAgent
 from Modules.aliasesType import *
 import numpy as np
+from Modules.colorText import *
 
 class ItDeepAgent(AbstactAgent):
     '''
@@ -39,18 +40,43 @@ class ItDeepAgent(AbstactAgent):
         while True and self.__maxDepth <= 5:
             print()
             print(f"Start AlphaBeta with depth max at {self.__maxDepth}")
-            beta = time.time()
-            moves, score = self._start_alpha_beta(lastMove=None, depth=self.__maxDepth, alpha=self.NINF, beta=self.INF, maximizingPlayer=True)
+            start = time.time()
+            moves, score = self._start_alpha_beta(  lastMove=None, 
+                                                    depth=self.__maxDepth, 
+                                                    alpha=self.NINF, 
+                                                    beta=self.INF, 
+                                                    maximizingPlayer=True)
             if score is None:
                 break
-            self.__bestMoves = moves
+
+            if self.__maxDepth == 1:
+                if len(moves) <= 5:
+                    self.__bestMoves = moves
+                else:
+                    shuffle(moves)
+                    self.__bestMoves = [moves[i] for i in range(5)]
+            elif self.__maxDepth == 3:
+                if len(moves) <= 3:
+                    self.__bestMoves = moves
+                else:
+                    shuffle(moves)
+                    self.__bestMoves = [moves[i] for i in range(3)]    
+            else:
+                self.__bestMoves = moves
+
+            print("bestMoves = ", [MyBoard.flat_to_name(m) for m in self.__bestMoves])
+            print("bestScore = ", score)
+            print(f"In {round(time.time()-start, 2)} secondes")
+            
             self.__maxDepth += incrementStep
-            print(f"In {round(time.time()-beta, 2)} secondes")
             if len(self.__bestMoves) == 1:
                 break
             if score == self.INF or score == self.NINF:
                 break
         
+        if len(self.__bestMoves) == 0:
+            return -1
+
         moveSelected = choice(self.__bestMoves)
         return moveSelected
         
@@ -72,7 +98,11 @@ class ItDeepAgent(AbstactAgent):
                 self.__board.pop()
                 continue
 
-            value = self._alpha_beta(lastMove=m, depth=depth-1, alpha=alpha, beta=beta, maximizingPlayer=not maximizingPlayer)
+            value = self._alpha_beta(   lastMove=m, 
+                                        depth=depth-1, 
+                                        alpha=alpha, 
+                                        beta=beta, 
+                                        maximizingPlayer=not maximizingPlayer)
             self.__board.pop()
 
             if value is None:
@@ -84,10 +114,6 @@ class ItDeepAgent(AbstactAgent):
                 bestMoves.append(m)
             elif value == bestScore:
                 bestMoves.append(m)
-
-        b = [MyBoard.flat_to_name(m) for m in bestMoves]
-        print("bestMoves = ", b)
-        print("bestScore = ", bestScore)
         return bestMoves, bestScore
 
 
@@ -96,7 +122,10 @@ class ItDeepAgent(AbstactAgent):
             return None
 
         if depth == 0 or self.__board.is_game_over():
-            return self.__evalHandler.board_value(board=self.__board, maxDepth=self.__maxDepth, maximizingPlayer=maximizingPlayer, lastMove=lastMove)
+            return self.__evalHandler.board_value(  board=self.__board, 
+                                                    maxDepth=self.__maxDepth, 
+                                                    maximizingPlayer=maximizingPlayer, 
+                                                    lastMove=lastMove)
 
         moves = self.__board.weak_legal_useful_moves()
         maxValue = self.NINF if maximizingPlayer else self.INF
@@ -106,7 +135,11 @@ class ItDeepAgent(AbstactAgent):
                 self.__board.pop()
                 continue
 
-            currentValue = self._alpha_beta(lastMove=m, depth=depth-1, alpha=alpha, beta=beta, maximizingPlayer=not maximizingPlayer)
+            currentValue = self._alpha_beta(    lastMove=m, 
+                                                depth=depth-1, 
+                                                alpha=alpha, 
+                                                beta=beta, 
+                                                maximizingPlayer=not maximizingPlayer)
             self.__board.pop()
             if currentValue is None:
                 return None
@@ -122,4 +155,6 @@ class ItDeepAgent(AbstactAgent):
                 return alpha if maximizingPlayer else beta
 
         return alpha if maximizingPlayer else beta
+
+
 
