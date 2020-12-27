@@ -1,4 +1,8 @@
 
+'''
+Permet de mettre facilement de la couleur dans le terminal.
+'''
+
 Bold_Red = "\033[1;31;48m"
 Bold_White = "\033[1;37;48m"
 Bold_Green = "\033[1;32;48m"

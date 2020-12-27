@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-''' This is the file you have to modify for the tournament. Your default AI player must be called by this module, in the
-myPlayer class.
-
-Right now, this class contains the copy of the randomPlayer. But you have to change this! '''
 
 import time
 from MyGoban import MyBoard 
@@ -14,6 +10,12 @@ from Modules.colorText import *
 
 class myPlayer(PlayerInterface):
 
+    '''
+    Notre Player actuel.
+    Utilise l'agent ItDeepAgent, contenu dans itDeepAgent.py.
+    Utilise l'heuristique MyGobanEval, contenu dans myGobanEval.py.
+    '''
+
     ############################################
     '''             Constructor              '''
 
@@ -24,13 +26,13 @@ class myPlayer(PlayerInterface):
         self._nbMove = 0
         self._lastMove = None
         self._lastOpponentMove = None
-        self._timeRemaining = 295
+        self._timeRemaining = 298
 
     ############################################
     '''          public functions            '''
 
     def getPlayerName(self):
-        return "Gab && Yo"
+        return "if(Gab && Yo) print(\"Let's GO\")"
 
     def newGame(self, color):
         self.__init__()
@@ -43,16 +45,6 @@ class myPlayer(PlayerInterface):
             print("Referee told me to play but the game is over!")
             return "PASS"
 
-        m1 = self._board.generate_legal_moves()
-        m2 = self._board.weak_legal_useful_moves()
-        print()
-        print(f"Len Legal moves        : {len(m1)}")
-        print(f"Len Legal Useful moves : {len(m2)}")
-        #print()
-        #print(f"Total my liberties     : {self._board.nb_liberties(self._myColor)}")
-        #print(f"Total other liberties  : {self._board.nb_liberties(self._opponentColor)}")
-        #print()
-        #print(f"Mes strings            : \n{self._board._strings[self._myColor]}")
         print(self._board.compute_territory(self._myColor))
 
         move = self._get_move()
@@ -91,25 +83,21 @@ class myPlayer(PlayerInterface):
                 duration = 25
             else:
                 duration = 30
-        elif self._timeRemaining > 50: # 150 et 51
+        elif self._timeRemaining > 60: # 150 et 61
             if self._nbMove < 30:
                 duration = 15
             elif self._nbMove < 60:
                 duration = 20
             else:
                 duration = 25
-        elif self._timeRemaining > 10: # 50 et 11
-            if self._nbMove < 30:
+        elif self._timeRemaining > 10: # 60 et 11
+            if self._nbMove < 60:
                 duration = 10
-            elif self._nbMove < 60:
-                duration = 15
             else:
-                duration = 20
+                duration = 15
         else: #10 et 0
-            duration = 5
+            duration = 2
 
-
-            
         timeBegin = time.time()
         agent = ItDeepAgent(board=self._board, color=self._myColor, duration=min(duration, self._timeRemaining))
         move = agent.get_next_move(lastOpponentMove=self._lastOpponentMove, evalHandler=MyGobanEval(), incrementStep=2)

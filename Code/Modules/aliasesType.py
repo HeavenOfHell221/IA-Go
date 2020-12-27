@@ -1,9 +1,18 @@
-from typing import List, Tuple, Dict, NoReturn, Any, Sequence, Union
+from typing import List, Tuple, Dict, NoReturn, Any, Sequence, Union, Set
 
+''' Représente un coup entre -1 et 81 ''' 
 FlattenMove = int
+
+''' Représente un coup sous forme de chaine de caractère : A1, E8, H6, ... '''
 Move = str
-FlattenMoves = List[int]
+
+''' Liste de FlattenMove '''
+FlattenMoveList = List[int]
+
+''' Liste de Move '''
 Moves = List[str]
-FlattenMove_None = Union[FlattenMove, None]
+
+''' Représente une couleur entre 0 et 2 '''
+Color = int
 
 

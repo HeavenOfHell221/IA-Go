@@ -8,12 +8,17 @@ from Modules.aliasesType import *
 import numpy as np
 
 class RandomAgent(AbstactAgent):
+    '''
+    Agent jouant aléatoirement.
+    Il utilise cependant {self.__board.weak_legal_useful_moves()} pour récupérer les coups à jouer.
+    '''
     def __init__(self, board:MyBoard):
         self.__board = board
 
     def get_next_move(self, lastOpponentMove, evalHandler, incrementStep):
         moves = self.__board.weak_legal_useful_moves()
 
+        # Pour éviter qu'il fasse trop vite un 'PASS' par hasard
         if len(moves) > 5:
             moves.remove(-1)
 

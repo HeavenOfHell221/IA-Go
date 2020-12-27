@@ -1,3 +1,4 @@
+#!/usr/bin/python3 +x
 # -*- coding: utf-8 -*-
 
 ''' This is a class to play small games of GO, natively coded in Python.
@@ -28,7 +29,6 @@
 
 from __future__ import print_function # Used to help cython work well
 import numpy as np
-import random
 from Modules.aliasesType import *
 from Modules.string import String
 from copy import deepcopy
@@ -139,8 +139,6 @@ class MyBoard:
         self._stringLiberties = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
         self._stringSizes = np.full((MyBoard.__BOARDSIZE**2), -1, dtype='int8')
 
-        #self._stonesBLACK = set()
-        #self._stonesWHITE = set()
         self._empties = set(range(MyBoard.__BOARDSIZE **2))
 
         # Zobrist values for the hashes. I use np.int64 to be machine independant
@@ -191,23 +189,23 @@ class MyBoard:
         return self._currentHash
 
     @property
-    def nextPlayer(self):
+    def nextPlayer(self) -> int:
         return self._nextPlayer
 
     @property
-    def winner(self):
+    def winner(self) -> int:
         return self._winner
 
     @property
-    def EMPTY(self):
+    def EMPTY(self) -> Color:
         return self.__EMPTY
 
     @property
-    def WHITE(self):
+    def WHITE(self) -> Color:
         return self.__WHITE
 
     @property
-    def BLACK(self):
+    def BLACK(self) -> Color:
         return self.__BLACK
 
 
@@ -267,7 +265,7 @@ class MyBoard:
         moves.append(-1) # We can always ask to pass
         return moves
 
-    def weak_legal_moves(self):
+    def weak_legal_moves(self) -> FlattenMoveList:
         '''
         Produce a list of moves, ie flatten moves. They are integers representing the coordinates on the board. To get
         named Move (like A1, D5, ..., PASS) from these moves, you can use the function MyBoard.flat_to_name(m).
@@ -280,19 +278,14 @@ class MyBoard:
         return moves
 
     def weak_legal_useful_moves(self):
+        '''
+        Retourne la liste des coups qui ne sont pas des coups suicides ou des yeux. 
+        '''
         moves = [m for m in self._empties 
             if (not self._is_suicide(m, self._nextPlayer) and 
                 not self.is_eye(m, self._nextPlayer))]
         moves.append(-1) # We can always ask to pass
         return moves
-
-    '''def weak_legal_useful_moves(self):
-        moves = [m for m in self._empties 
-            if (not self._is_suicide(m, self._nextPlayer) and 
-                not self.is_eye(m, self._nextPlayer) and 
-                not self.is_useless(m, self._nextPlayer))]
-        moves.append(-1) # We can always ask to pass
-        return moves'''
 
     def generate_legal_moves(self):
         ''' See legal_moves description. This is just a wrapper to this function, kept for compatibility.'''
@@ -514,13 +507,13 @@ class MyBoard:
         return self._positionHashes[fcoord][color-1]
 
     # Used only in init to build the neighborsEntries datastructure
-    def _get_neighbors(self, fcoord) -> FlattenMoves:
+    def _get_neighbors(self, fcoord) -> FlattenMoveList:
         x, y = MyBoard.unflatten(fcoord)
         neighbors = ((x+1, y), (x-1, y), (x, y+1), (x, y-1))
         return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
 
     # Used only in init to build the cornersEntries datastructure
-    def _get_corners(self, fcoord) -> FlattenMoves:
+    def _get_corners(self, fcoord) -> FlattenMoveList:
         x, y = MyBoard.unflatten(fcoord)
         corners = ((x+1, y+1), (x-1, y-1), (x-1, y+1), (x+1, y-1))
         return [MyBoard.flatten(c) for c in corners if self._is_on_board(c[0], c[1])]
@@ -846,7 +839,11 @@ class MyBoard:
 
     ''' Extension du Goban original '''
 
-    def nb_stones(self, color:int) -> int:
+    def nb_stones(self, color:Color) -> int:
+        '''
+        Retourne ne nombre de pierre appartenant à la couleur {color}.
+        Si la couleur est EMPTY, alors retourne le nombre de cellule vide.
+        '''
         if color == MyBoard.__WHITE:
             return self._nbWHITE
         elif color == MyBoard.__BLACK:
@@ -854,51 +851,66 @@ class MyBoard:
         else:
             return MyBoard.__BOARDSIZE - self._nbWHITE - self._nbBLACK
 
-    def nb_liberties(self, color:int) -> int:
-        strings = self._strings[color]
+    def nb_liberties(self, color:Color) -> int:
+        '''
+        Retourne le nombre de liberté total qu'une couleur possède.
+        '''
+        assert color != MyBoard.__EMPTY
         libs = 0
-        for s in strings:
+        for s in self._strings[color]:
             libs += len(s.liberties)
         return libs
 
-    def nb_strings(self, color:int) -> int:
+    def nb_strings(self, color:Color) -> int:
+        '''
+        Retourne le nombre de string total qu'une couleur possède.
+        '''
+        assert color != MyBoard.__EMPTY
         return len(self._strings[color])
 
-    def get_liberties(self, color:int):
+    def get_liberties(self, color:Color) -> Set[FlattenMove]:
+        '''
+        Retourne toutes les libertés (en flat) qu'une couleur possède.
+        '''
+        assert color != MyBoard.__EMPTY
         strings = set()
         for s in self._strings[color]:
             strings |= s.liberties 
         return strings
 
-    def nb_shared_liberty(self, color, fcoord):
-        ''' Pour une case vide {fcoord}, donne le nombre de string autour de cette case'''
-        
+    def nb_shared_liberty(self, color:Color, fcoord:FlattenMove) -> Tuple[int, int]:
+        ''' 
+        Pour une case vide {fcoord}, donne le nombre de string différent autour de cette case. 
+        Suivant la couleur {color}, différencie les strings alliés de celles adverse.
+        '''
         assert self._board[fcoord] == MyBoard.__EMPTY
-        n = 0
-        no = 0
+        nb = 0
+        nbOp = 0
         for s in self._strings[color]:
             if fcoord in s.liberties:
-                n += 1
+                nb += 1
 
         for s in self._strings[MyBoard.flip(color)]:
             if fcoord in s.liberties:
-                no += 1
+                nbOp += 1
         
-        if self.__DEBUG:
-            assert n == 1 or n == 2 or n == 3 or n == 4
-            assert no == 0 or no == 1 or no == 2 or no == 3
-            assert (n + no) <= 4 and (n + no) >= 1 
+        return nb, nbOp
 
-        return n, no
-
-    def is_eye(self, fcoord, color) -> bool:
-        if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
+    def is_eye(self, fcoord:FlattenMove, color:Color) -> bool:
+        '''
+        Vérifie si la cellule {fcoord} est un oeil de la couleur {color}.
+        Un oeil est une cellule vide qui a tous ses voisins de la même couleur.
+        Ensuite soit :
+            - Elle est sur le bord du plateau, alors tous les coins doivent être de la même couleur
+            - Sinon, elle doit avoir au moins 3 coins de la même couleur
+        Les voisins et les coins doivent être de la même couleur également.
+        '''
+        if self._board[fcoord] != MyBoard.__EMPTY: # Si ce n'est pas une case vide, on retourne
             return False
 
         # On regarde les 4 voisins
-        # Si un voisin est d'une autre couleur que la notre, ce n'est pas un oeuil 
+        # Si un voisin est d'une autre couleur que la notre, ce n'est pas un oeil 
         i = self._neighborsEntries[fcoord] 
-        n = 0
         while self._neighbors[i] != -1:
             if  self._board[self._neighbors[i]] != color:
                 return False
@@ -907,6 +919,7 @@ class MyBoard:
         off_board_corners = 4 
         friendly_corners = 0
         
+        # On regarde les corners
         i = self._cornersEntries[fcoord]
         while self._corners[i] != -1:
             if self._board[self._corners[i]] == color:
@@ -914,165 +927,68 @@ class MyBoard:
             off_board_corners -= 1
             i += 1
         
+        # Si la cellule {fcoord} est sur le bord du board
         if off_board_corners > 0:
-            n = off_board_corners + friendly_corners
-            return (n == 4)
+            return (off_board_corners + friendly_corners == 4)
 
         return (friendly_corners >= 3)
 
 
-    def is_useless(self, fcoord, color):
+    def is_useless(self, fcoord:FlattenMove, color:Color) -> bool:
+        '''
+        Vérifie si jouer une pierre sur la cellule {fcoord} est utile ou non.
+        Un coup dit "inutile" est un coup qui place une pierre sur une cellule déjà acquise 
+        (i.e. que l'adversaire ne peut pas placer une pierre dessus).
+        Dans certains cas, on peut être amené à jouer ce genre de coup, pour fusionner des strings par exemple.
+        '''
         if self._board[fcoord] != MyBoard.__EMPTY: # Si c'est pas une case vide, on quitte
             return False
         
         i = self._neighborsEntries[fcoord] 
-        n = 0
-        no = 0
+        nb = 0
+        nbOp = 0
         while self._neighbors[i] != -1:
             if self._board[self._neighbors[i]] == color:
-                n += 1
+                nb += 1
             elif self._board[self._neighbors[i]] == MyBoard.flip(color):
-                no += 1
+                nbOp += 1
             i += 1
 
         # Le coup n'est pas inutile s'il y a une pierre adverse (pour peut être capturer)
-        if no == 1 and n == 3: 
+        if nbOp == 1 and nb == 3: 
             return False
 
         # Le coup est inutile s'il y a déjà 3 ou 4 pierres de notre couleur autour 
-        return (n >= 3)
-
-    ############################################################################
-    ############################################################################
-    ############################################################################
-
-    ''' Fonctions de gestion des chaînes de pierre contenu dans self._strings '''
-
-    def _create_string(self, color, liberties, stones):
-        s = String(color=color, liberties=liberties, stones=stones)
-        self._strings[color].append(s)
-        return s
-
-    def _merge_string(self, s1, s2):
-        s1.liberties |= s2.liberties
-        s1.stones |= s2.stones
-        self._delete_string(s2)
-        return s1
-
-    def _delete_string(self, s):
-        self._strings[s.color].remove(s)
-        del s
-
-    def _find_string(self, fcoord, color):
-        for string in self._strings[color]:
-            if fcoord in string.stones:
-                return string
-        assert False
-
-    def _capture_string_object(self, string):
-        for stone in string.stones:
-            i = self._neighborsEntries[stone]
-            while self._neighbors[i] != -1:
-                fn = self._neighbors[i]
-                cell = self._board[fn]
-                if cell != MyBoard.__EMPTY:
-                    s = self._find_string(fn, cell)
-                    if s is not string: 
-                        s.liberties.add(stone)
-                i += 1
-        self._delete_string(string)
-
-    def _compute_liberties(self, fcoord, color):
-        nbEmpty = 0
-        nbSameColor = 0
-        nbOtherColor = 0
-        liberties = set()
-        i = self._neighborsEntries[fcoord]
-        while self._neighbors[i] != -1:
-            fn = self._neighbors[i]
-            cell = self._board[fn]
-            if  cell == MyBoard.__EMPTY:
-                nbEmpty += 1
-                liberties.add(fn)
-            elif cell == color:
-                nbSameColor += 1
-            else:
-                nbOtherColor += 1
-            i += 1
-            
-        return (nbEmpty, nbSameColor, nbOtherColor, liberties)
-
-    def compute_weak_strings_k_liberties(self, color, k):
-        nbWeakStrings = 0
-        nbWeakStringsOpponent = 0
-
-        for s in self._strings[color]:
-            if len(s.liberties) == k:
-                nbWeakStrings += 1
-
-        for s in self._strings[MyBoard.flip(color)]:
-            if len(s.liberties) == k:
-                nbWeakStringsOpponent += 1
-
-        return (nbWeakStrings, nbWeakStringsOpponent)       
-
-    def nb_strings(self, color):
-        return len(self._strings[color])
-        
-    def get_strings(self, color):
-        return self._strings[color]
-
-    def _put_stone_object(self, fcoord, color, allLiberties):
-        (nbEmpty, nbSameColor, nbOtherColor, lib) = allLiberties
-        stringWithNoLiberties = []
-        newString = self._create_string(color=color, liberties=lib, stones=set([fcoord]))
-
-        i = self._neighborsEntries[fcoord]
-        while self._neighbors[i] != -1:
-            fn = self._neighbors[i]
-            cell = self._board[fn]
-
-            if  cell == color:
-
-                s = self._find_string(fn, cell)
-                s.liberties.discard(fcoord)
-                if s is not newString:
-                    newString = self._merge_string(s, newString)
-                
-            elif cell != MyBoard.__EMPTY:
-
-                s = self._find_string(fn, cell)
-                s.liberties.discard(fcoord)
-                if len(s.liberties) == 0:
-                    if s not in stringWithNoLiberties:
-                        stringWithNoLiberties.append(s)
-            i += 1
-
-        return stringWithNoLiberties
+        return (nb >= 3)
 
 
-    def _get_territory_neighbors(self, fcoord):
+    def _get_territory(self, fcoord:FlattenMove) -> FlattenMoveList: 
+        '''
+        Retourne la liste des coordonnées valide suivant la cellule {fcoord}.
+        Un territoire est composé des 8 cellules autour de la cellule {fcoord} et de la cellule 
+        {fcoord} elle-même.
+        '''
         x, y = MyBoard.unflatten(fcoord)
-        '''neighbors = [   (x-2, y+2), (x-1, y+2), (x, y+2), (x+1, y+2), (x+2, y+2),
-                        (x-2, y+1), (x-1, y+1), (x, y+1), (x+1, y+1), (x+2, y+1),
-                        (x-2, y),   (x-1, y),   (x, y),   (x+1, y),   (x+2, y),
-                        (x-2, y-1), (x-1, y-1), (x, y-1), (x+1, y-1), (x+2, y-1),
-                        (x-2, y-2), (x-1, y-2), (x, y-2), (x+1, y-2), (x+2, y-2)]'''
-
         neighbors = [   (x-1, y+1), (x, y+1), (x+1, y+1),
                         (x-1, y),   (x, y),   (x+1, y),
                         (x-1, y-1), (x, y-1), (x+1, y-1)]
+
         return [MyBoard.flatten(c) for c in neighbors if self._is_on_board(c[0], c[1])]
 
 
-    def compute_territory(self, color):
+    def compute_territory(self, color:Color) -> Tuple[int, int, int, int, int]:
         ''' 
-        Pour chaque cellule vide, calcul à quel territoire elle partient.
+        Pour chaque cellule du plateau, calcul à quel territoire elle partient.
+        Un territoire est définit par la méthode "self._get_territory".
+
         Only_Color          -> Si la cellule n'a que des voisins de la couleur {color}
         Only_OtherColor     -> Idem mais avec la couleur opposée
-        Color               -> Si la cellule a une majorité absolue de voisin de la couleur {color} (soit au moins 5 sur 9)
+
+        Color               -> Si la cellule a une majorité absolue de voisin de la couleur {color}
         OtherColor          -> Idem mais avec la couleur opposée
-        Dangerous           -> La cellule est en conflit (aucun des deux joueurs la possède)
+
+        Dangerous           -> La cellule est en conflit (aucun des deux joueurs ne la possède)
+        (regroupe également les territoires neutres, ceux qui n'ont aucune cellule de couleur)
         ''' 
 
         nb_territory_only_color = 0
@@ -1081,12 +997,14 @@ class MyBoard:
         nb_territory_otherColor = 0
         nb_territory_dangerous = 0
 
-        for cell in range(0, 81, 1):
+        for fcoord in range(0, 81, 1):
         #for cell in self._empties:
-            neighbors = self._get_territory_neighbors(cell)
+            neighbors = self._get_territory(fcoord)
             nbColor = 0
             nbOtherColor = 0
             nbEmpty = 0
+
+            # Calcul des pierres dans le territoire
             for fn in neighbors:
                 if self._board[fn] == color:
                     nbColor += 1
@@ -1095,26 +1013,26 @@ class MyBoard:
                 else:
                     nbEmpty += 1
 
-            if (nbColor > 0 and nbOtherColor == 0):
-                ''' Voisin(s) seulement de notre couleur '''
+            if (nbColor > 0 and nbOtherColor == 0): # Voisin(s) seulement de notre couleur
                 nb_territory_only_color += 1
-            elif (nbColor > nbOtherColor + nbEmpty):
-                ''' Majorité de notre couleur '''
+            elif (nbColor > nbOtherColor + nbEmpty): # Majorité de notre couleur
                 nb_territory_color += 1
-            elif (nbColor == 0 and nbOtherColor > 0):
-                ''' Voisin(s) seulement la couleur adverse ''' 
+            elif (nbColor == 0 and nbOtherColor > 0): # Voisin(s) seulement la couleur adverse
                 nb_territory_only_otherColor += 1
-            elif (nbOtherColor > nbColor + nbEmpty):
-                ''' Majorité de la couleur adverse '''
+            elif (nbOtherColor > nbColor + nbEmpty): # Majorité de la couleur adverse
                 nb_territory_otherColor += 1
-            else:
+            else: # Dangereux ou neutre
                 nb_territory_dangerous += 1
 
         return (nb_territory_only_color, nb_territory_only_otherColor, nb_territory_color, nb_territory_otherColor, nb_territory_dangerous)
 
 
-    def get_data(self, color, otherColor):
-        ''' Récupération des données du board '''
+    def get_data(self, color:Color, otherColor:Color) -> Dict[str, int]:
+        '''
+        Récupération des données du board.
+        Méthode utilisé dans les heuristiques. 
+        Génère un dictionnaire pour accéder facilement aux données.
+        '''
 
         my_nbStones = self.nb_stones(color)
         other_nbStones = self.nb_stones(otherColor)
@@ -1146,3 +1064,150 @@ class MyBoard:
         }
         
         return data
+
+    ############################################################################
+    ############################################################################
+    ############################################################################
+
+    ''' Fonctions de gestion des String contenu dans self._strings '''
+
+    def _create_string(self, color:Color, liberties:Set[FlattenMove], stones:Set[FlattenMove]) -> String:
+        '''
+        Création d'un objet String.
+        L'ajoute dans la liste {self._strings[color]}.
+        '''
+        s = String(color=color, liberties=liberties, stones=stones)
+        self._strings[color].append(s)
+        return s
+
+    def _merge_string(self, s1:String, s2:String) -> String:
+        '''
+        Fusionne les String s1 et s2.
+        Supprime S2.
+        '''
+        s1.liberties |= s2.liberties
+        s1.stones |= s2.stones
+        self._delete_string(s2)
+        return s1
+
+    def _delete_string(self, s:String) -> None:
+        self._strings[s.color].remove(s)
+        del s
+
+    def _find_string(self, fcoord:FlattenMove, color:Color) -> String:
+        '''
+        A partir d'une cellule {fcoord}, cherche à quelle String elle appartient.
+        '''
+        for string in self._strings[color]:
+            if fcoord in string.stones:
+                return string
+        assert False
+
+    def _capture_string_object(self, string:String) -> None:
+        '''
+        Capture le String {string}.
+        Modifie les String voisins en conséquence.
+        Une fois le String {string} capturé, le supprime.
+        '''
+        for stone in string.stones:
+            i = self._neighborsEntries[stone]
+            while self._neighbors[i] != -1:
+                fn = self._neighbors[i]
+                cell = self._board[fn]
+                if cell != MyBoard.__EMPTY:
+                    s = self._find_string(fn, cell)
+                    if s is not string: 
+                        s.liberties.add(stone)
+                i += 1
+        self._delete_string(string)
+
+    def _compute_liberties(self, fcoord:FlattenMove, color:Color) -> Tuple[int, int, int, Set[FlattenMove]]:
+        '''
+        Pour une cellule {fcoord}, calcul : 
+            - Le nombre de voisin de la couleur {color}
+            - Le nombre de voisin adverse
+            - Le nombre de cellule vide
+            - Récupère les coordonnées des libertés de la cellule {fcoord}
+        '''
+        nbEmpty = 0
+        nbSameColor = 0
+        nbOtherColor = 0
+        liberties = set()
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            fn = self._neighbors[i]
+            cell = self._board[fn]
+            if  cell == MyBoard.__EMPTY:
+                nbEmpty += 1
+                liberties.add(fn)
+            elif cell == color:
+                nbSameColor += 1
+            else:
+                nbOtherColor += 1
+            i += 1
+            
+        return (nbEmpty, nbSameColor, nbOtherColor, liberties)
+
+    def compute_weak_strings_k_liberties(self, color:Color, k:int) -> Tuple[int,int]:
+        '''
+        Compte, pour une couleur donné, le nombre de String qui a exactement {k} liberté.
+        Compte également pour l'adversaire.
+        '''
+        
+        nbWeakStrings = 0
+        nbWeakStringsOpponent = 0
+
+        for s in self._strings[color]:
+            if len(s.liberties) == k:
+                nbWeakStrings += 1
+
+        for s in self._strings[MyBoard.flip(color)]:
+            if len(s.liberties) == k:
+                nbWeakStringsOpponent += 1
+
+        return (nbWeakStrings, nbWeakStringsOpponent)       
+
+    def nb_strings(self, color:Color) -> int:
+        ''' Nombre de String du couleur {color} '''
+        return len(self._strings[color])
+        
+    def get_strings(self, color:Color) -> List[String]:
+        ''' Retourne la liste des String du joueur {color} '''
+        return self._strings[color]
+
+    def _put_stone_object(self, fcoord:FlattenMove, color:Color, allLiberties:Tuple[int, int, int, Set[FlattenMove]]) -> List[String]:
+
+        '''
+        Equivalent à self._put_stone, mais pour l'utilisation des objets String.
+        Place une nouvelle pierre aux coordonnées {fcoord} et mets à jour les String des
+        deux joueurs.
+        Retourne la liste des String à capturer.
+        '''
+
+        (nbEmpty, nbSameColor, nbOtherColor, lib) = allLiberties
+        stringWithNoLiberties = []
+        newString = self._create_string(color=color, liberties=lib, stones=set([fcoord]))
+
+        i = self._neighborsEntries[fcoord]
+        while self._neighbors[i] != -1:
+            fn = self._neighbors[i]
+            cell = self._board[fn]
+
+            if  cell == color:
+                s = self._find_string(fn, cell)
+                s.liberties.discard(fcoord)
+                if s is not newString:
+                    newString = self._merge_string(s, newString)
+                
+            elif cell == MyBoard.flip(color):
+                s = self._find_string(fn, cell)
+                s.liberties.discard(fcoord)
+                if len(s.liberties) == 0:
+                    if s not in stringWithNoLiberties:
+                        stringWithNoLiberties.append(s)
+            i += 1
+
+        return stringWithNoLiberties
+
+
+    

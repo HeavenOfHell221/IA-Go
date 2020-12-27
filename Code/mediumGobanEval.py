@@ -1,5 +1,11 @@
 from abstractGobanEval import AbstractGobanEval
 
+'''
+Contient une partie de nos anciennes IA.
+Permet de les faire jouer contre notre IA actuelle.
+'''
+
+
 class MediumGobanEval_V1(AbstractGobanEval):
     def __init__(self):
         pass
@@ -38,7 +44,6 @@ class MediumGobanEval_V2(AbstractGobanEval):
 
     def board_value(self, board, maxDepth, maximizingPlayer, lastMove):
         from MyGoban import MyBoard
-        ''' Heuristique d'un plateau de jeu de GO avec 9x9 cases '''
 
         m = board.flat_to_name(lastMove)
         
@@ -181,7 +186,6 @@ class MediumGobanEval_V4(AbstractGobanEval):
         pass
 
     def board_value(self, board, maxDepth, maximizingPlayer, lastMove):
-        ''' Heuristique d'un plateau de jeu de GO avec 9x9 cases '''
         from MyGoban import MyBoard
 
         m = board.flat_to_name(lastMove)

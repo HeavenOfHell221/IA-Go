@@ -2,8 +2,12 @@
 from MyGoban import MyBoard
 from abc import ABC as AbstractClass
 from abc import abstractmethod 
+from Modules.aliasesType import *
 
 class AbstactAgent(AbstractClass):
+    '''
+    Classe abstaite pour les agents.
+    '''
 
     ############################################
     '''             Constructor              '''
@@ -15,5 +19,9 @@ class AbstactAgent(AbstractClass):
     '''     Public functions for myPlayer     '''
 
     @abstractmethod
-    def get_next_move(self, lastOpponentMove, evalHandler):
+    def get_next_move(self, lastOpponentMove:FlattenMove, evalHandler:AbstractGobanEval, incrementStep:int) -> FlattenMove:
+        '''
+        Calcul, via le déroulement de l'arbre de jeu, le meilleur mouvement à jouer, puis le retourne.
+        Utilise {evalHandler} pour évaluer un plateau de jeu.
+        '''
         pass
