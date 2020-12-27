@@ -42,19 +42,19 @@ stringio = StringIO()
 wrongmovefrom = 0
 
 while not b.is_game_over():
-    #print("Referee Board:")
-    #b.prettyPrint() 
+    print("Referee Board:")
+    b.prettyPrint() 
     print("Before move", nbmoves)
     legals = b.legal_moves() # legal moves are given as internal (flat) coordinates, not A1, A2, ...
-    #print("Legal Moves: ", [b.move_to_str(m) for m in legals]) # I have to use this wrapper if I want to print them
+    print("Legal Moves: ", [b.move_to_str(m) for m in legals]) # I have to use this wrapper if I want to print them
     nbmoves += 1
     otherplayer = (nextplayer + 1) % 2
     othercolor = Goban.Board.flip(nextplayercolor)
     
     currentTime = time.time()
-    #sys.stdout = stringio
+    sys.stdout = stringio
     move = players[nextplayer].getPlayerMove() # The move must be given by "A1", ... "J8" string coordinates (not as an internal move)
-    #sys.stdout = sysstdout
+    sys.stdout = sysstdout
     playeroutput = stringio.getvalue()
     stringio.truncate(0)
     stringio.seek(0)

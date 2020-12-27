@@ -1,4 +1,4 @@
-from aliasesType import *
+from Modules.aliasesType import *
 
 class String:
     '''

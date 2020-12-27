@@ -73,11 +73,11 @@ class myPlayer(PlayerInterface):
         timeBegin = time.time()
 
         if self._nbMove < 3*9:
-            duration = 10
+            duration = 3
         elif self._nbMove < 6*9:
-            duration = 15
+            duration = 6
         else:
-            duration = 20
+            duration = 9
             
         agent = ItDeepAgent(board=self._board, color=self._myColor, duration=duration)
         move = agent.get_next_move(self._lastOpponentMove, MediumGobanEval_V1(), incrementStep=2)

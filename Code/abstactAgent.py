@@ -19,9 +19,9 @@ class AbstactAgent(AbstractClass):
     '''     Public functions for myPlayer     '''
 
     @abstractmethod
-    def get_next_move(self, lastOpponentMove:FlattenMove, evalHandler:AbstractGobanEval, incrementStep:int) -> FlattenMove:
+    def get_next_move(self, lastOpponentMove:FlattenMove, evalHandler, incrementStep:int) -> FlattenMove:
         '''
         Calcul, via le déroulement de l'arbre de jeu, le meilleur mouvement à jouer, puis le retourne.
-        Utilise {evalHandler} pour évaluer un plateau de jeu.
+        Utilise {evalHandler} pour évaluer un plateau de jeu. Il est de type AbstractGobanEval.
         '''
         pass

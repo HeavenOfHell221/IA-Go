@@ -52,7 +52,7 @@ class ItDeepAgent(AbstactAgent):
     def maxDepth(self):
         return self.__maxDepth
 
-    def get_next_move(self, lastOpponentMove:FlattenMove, evalHandler:AbstractGobanEval, incrementStep:int=2) -> FlattenMove:
+    def get_next_move(self, lastOpponentMove:FlattenMove, evalHandler, incrementStep:int=2) -> FlattenMove:
 
         # L'algorithme va s'arrêter une fois que time.time() vaut self.__timeToStop
         self.__timeToStop = time.time() + self.__itDeepDuration  
@@ -71,7 +71,7 @@ class ItDeepAgent(AbstactAgent):
                                                     alpha=self.NINF, 
                                                     beta=self.INF, 
                                                     maximizingPlayer=True)
-            if score is None: # Si l'alpha beta c'est arrêté à cause du manque de temps
+            if score is None or len(moves) == 0: # Si l'alpha beta c'est arrêté à cause du manque de temps
                 break
 
             # Pour éviter d'avoir une liste de coup trop grande, on la raccourci dans certain cas

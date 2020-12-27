@@ -94,6 +94,8 @@ Un bon plateau est alors un plateau où le score est élevé.
 
 Nous utilisons notamment le système de territoire, les String des deux joueurs, les données calculés dans `board.get_data`, des poids pour certaines cellules (qui permettent d'orienter un peu l'IA pour les premiers coups).
 
+Nous vous invitons fortement à regarder myGobanEval.py où nous avons beaucoup détaillé l'heuristique. Notre heuristique n'est pas compliquée, mais l'expliquer ici n'aurait pas de sens car ce n'est que des `if`. Il n'y à une logique, mais plein de critère indépendant les uns des autres qui rendent un plateau bon. 
+
 2. __MediumGobanEval__
 
 Les MediumGobanEval_VX (contenu dans mediumGobanEval.py) sont nos anciennes heuristiques. Nous les avons gardé pour jouer contre MyGobanEval et voir si les changements qu'on apportait rendait le joueur plus performant ou non.

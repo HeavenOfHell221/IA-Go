@@ -33,7 +33,7 @@ class MediumGobanEval_V1(AbstractGobanEval):
         score = 0
         score += data['my_nbStones'] - data['other_nbStones']
         score += data['my_nbLiberties'] - data['other_nbLiberties']
-        score += data['my_nbStrings'] - data['other_nbStrings']
+        #score += data['my_nbStrings'] - data['other_nbStrings']
 
         return score
 

@@ -78,25 +78,22 @@ class myPlayer(PlayerInterface):
 
         if self._timeRemaining > 150: # 300 et 151
             if self._nbMove < 30:
-                duration = 20
+                duration = 15
             elif self._nbMove < 60:
-                duration = 25
+                duration = 20
             else:
-                duration = 30
+                duration = 25
         elif self._timeRemaining > 60: # 150 et 61
             if self._nbMove < 30:
-                duration = 15
-            elif self._nbMove < 60:
-                duration = 20
-            else:
-                duration = 25
-        elif self._timeRemaining > 10: # 60 et 11
-            if self._nbMove < 60:
                 duration = 10
-            else:
+            elif self._nbMove < 60:
                 duration = 15
+            else:
+                duration = 20
+        elif self._timeRemaining > 30: # 60 et 31
+            duration = 10
         else: #10 et 0
-            duration = 2
+            duration = 1
 
         timeBegin = time.time()
         agent = ItDeepAgent(board=self._board, color=self._myColor, duration=min(duration, self._timeRemaining))
